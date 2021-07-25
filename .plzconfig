@@ -1,0 +1,26 @@
+; Please config file
+; Leaving this file as is is enough to use plz to build your project.
+; Please will stay on whatever version you currently have until you run
+; 'plz update', when it will download the latest available version.
+;
+; Or you can uncomment the following to pin everyone to a particular version;
+; when you change it all users will automatically get updated.
+[please]
+version = 16.2.1
+
+[go]
+importpath = github.com/VJftw/please-terraform
+gotool = //third_party/go:toolchain|go
+
+[buildconfig]
+; terraform
+terraform-module-builder-src = //scripts:module_builder
+terraform-runner-src = //scripts:runner
+terraform-workspace-builder-src = //scripts:workspace_builder
+please-terraform-tool = //cmd/please-terraform
+
+[alias "lint"]
+cmd = run sequential --include lint //scripts/lint/...
+
+[alias "fmt-all"]
+cmd = run sequential --include fmt //scripts/fmt/...

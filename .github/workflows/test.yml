@@ -1,0 +1,13 @@
+---
+name: Test
+on: [push]
+jobs:
+  build:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Test
+        run: ./pleasew test -p -v2 //...

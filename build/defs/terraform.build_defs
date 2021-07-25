@@ -1,0 +1,351 @@
+"""Build rules for working with Hashicorp Terraform (https://terraform.io)
+"""
+
+TERRAFORM_DEFAULT_TOOLCHAIN = CONFIG.get('TERRAFORM_DEFAULT_TOOLCHAIN') or "//third_party/binary:terraform"
+
+MODULE_BUILDER_SRC = CONFIG.get('TERRAFORM_MODULE_BUILDER_SRC') or "//third_party/defs:_terraform_module_builder"
+RUNNER_SRC = CONFIG.get('TERRAFORM_RUNNER_SRC') or "//third_party/defs:_terraform_runner"
+WORKSPACE_BUILDER_SRC = CONFIG.get('TERRAFORM_WORKSPACE_BUILDER_SRC') or "//third_party/defs:_terraform_workspace_builder"
+
+PLEASE_TERRAFORM_TOOL = CONFIG.get('PLEASE_TERRAFORM_TOOL') or "//third_party/defs:_terraform_module_builder"
+
+def terraform_toolchain(
+    name:str,
+    version:str,
+    hashes:list = [],
+    labels: list = [],
+    visibility:list = [],
+):
+    """Build rule for obtaining a version of the Terraform CLI.
+    Args:
+        name: The name of the build rule.
+        version: The version of Terraform to download in MAJOR.MINOR.PATCH format. e.g. "0.12.3".
+        hashes: The hashes to verify the downloaded archive against.
+        labels: The additonal labels to add to the build rule.
+        visibility: The targets to make the toolchain visible to.
+    """
+    download=remote_file(
+        name = f"_{name}_download",
+        out = f"_{name}_download",
+        url = f"https://releases.hashicorp.com/terraform/{version}/terraform_{version}_{CONFIG.OS}_{CONFIG.ARCH}.zip",
+        hashes = hashes,
+        extract = True,
+    )
+    return genrule(
+        name=name,
+        srcs=[download],
+        # Output into a directory so that we can add `terraform` to the $PATH at runtime.
+        outs=[f"_{name}_download/terraform"],
+        cmd="mkdir -p $(dirname $OUTS) && mv $SRCS/terraform $OUTS",
+        visibility = visibility,
+        binary = True,
+    )
+
+def terraform_registry_provider(
+    name: str,
+    registry: str = "https://registry.terraform.io",
+    provider: str,
+    version: str,
+    licences: list = [],
+    labels: list = [],
+    visibility: list = [],
+    hashes: list = [],
+):
+    provider_namespace=provider.split("/")[0]
+    provider_type=provider.split("/")[1]
+
+    aliases = [provider, "//$PKG:$NAME"]
+    aliases_flags = [f"--aliases=\"{a}\"" for a in aliases]
+    aliases_cmd = " ".join(aliases_flags)
+
+    genrule(
+        name = name,
+        sandbox = False,
+        outs = [name],
+        tools = [PLEASE_TERRAFORM_TOOL],
+        srcs = [],
+        exit_on_error = True,
+        hashes = hashes,
+        cmd = f"""
+$TOOLS -vvvvv terraformregistryprovider build \\
+    --registry="{registry}" \\
+    --namespace="{provider_namespace}" \\
+    --type="{provider_type}" \\
+    --version="{version}" \\
+    --os="{CONFIG.OS}" \\
+    --arch="{CONFIG.ARCH}" \\
+    --out="$OUTS" \\
+    --pkg="$PKG" \\
+    {aliases_cmd}
+""",
+        visibility = visibility,
+    )
+
+def terraform_registry_module(
+    name: str,
+    registry: str = "https://registry.terraform.io",
+    module: str,
+    version: str,
+    strip: list = [],
+    deps: list = [],
+    hashes: list = [],
+    licences: list = [],
+    labels: list = [],
+    visibility: list = [],
+):
+    deps=[canonicalise(dep) for dep in deps]
+
+    mod_namespace=module.split("/")[0]
+    mod_name=module.split("/")[1]
+    mod_provider=module.split("/")[2]
+
+    strip_flags = [f"--strip=\"{s}\"" for s in strip]
+    strip_cmd = " ".join(strip_flags)
+    aliases = [module, "//$PKG:$NAME"]
+    aliases_flags = [f"--aliases=\"{a}\"" for a in aliases]
+    aliases_cmd = " ".join(aliases_flags)
+
+    deps_flags = [f"--deps=\"$(location {d})\"" for d in deps]
+    deps_cmd = " ".join(deps_flags)
+
+    genrule(
+        name = name,
+        sandbox = False,
+        outs = [name],
+        tools = [PLEASE_TERRAFORM_TOOL],
+        deps = deps,
+        exported_deps = deps,
+        exit_on_error = True,
+        hashes = hashes,
+        visibility = visibility,
+        cmd = f"""
+$TOOLS -vvvvv terraformregistrymodule build \\
+    --registry="{registry}" \\
+    --namespace="{mod_namespace}" \\
+    --name="{mod_name}" \\
+    --provider="{mod_provider}" \\
+    --version="{version}" \\
+    --out="$OUTS" \\
+    --pkg="$PKG" \\
+    {strip_cmd} {deps_cmd} {aliases_cmd}
+
+# strip git dir for consistent hashes
+rm -rf $OUTS/.git
+""",
+    )
+
+
+def terraform_module(
+    name: str,
+    srcs: list = None,
+    deps: list = [],
+    labels: list = [],
+    visibility: list = [],
+):
+    """Build rule for defining a local Terraform module.
+    Args:
+        name: The name of the build rule.
+        srcs: The source Terraform files for the Terraform module.
+        deps: The modules that this module depends on.
+        labels: The additonal labels to add to the build rule.
+        visibility: The targets to make the toolchain visible to.
+    """
+    deps=[canonicalise(dep) for dep in deps]
+
+    og_module=genrule(
+        name = f"_{name}_srcs",
+        srcs = srcs,
+        outs = [f"_{name}_srcs"],
+        deps = deps,
+        # srcs in other directories should be modules... no, this shouldnt flatten modules.
+        cmd = "mkdir $OUTS && for src in $SRCS; do cp $src $OUTS/; done",
+    )
+
+    deps_flags = [f"--dependency_paths=\"$(location {dep}):$(out_location {dep})\"" for dep in deps]
+    deps_cmd = " ".join(deps_flags)
+
+    genrule(
+        name = name,
+        srcs = [og_module],
+        outs = [name],
+        exported_deps=deps,
+        deps=deps,
+        visibility=visibility,
+        tools=[PLEASE_TERRAFORM_TOOL],
+        cmd = f"""
+$TOOLS terraformmodule build \\
+    --module_directory "$(location {og_module})" \\
+    --out "$OUTS" \\
+    {deps_cmd}
+        """,
+    )
+
+def terraform_root(
+    name: str,
+    srcs: list,
+    var_files: list = [],
+    modules: list = [],
+    providers: list = [],
+    toolchain: str = None,
+    pre_binaries: list = [],
+    post_binaries: list = [],
+    labels: list = [],
+    visibility: list = [],
+):
+    """Build rule for running Terraform against Terraform configuration.
+    Args:
+        name: The name of the build rule.
+        srcs: The source Terraform files for the root module.
+        vars: The Terraform var files passed into the root module.
+        modules: The Terraform modules that the srcs use.
+        providers: The Terraform providers that the srcs use.
+        toolchain: The Terraform toolchain to use with against the srcs.
+        pre_binares: A list of binaries to run before performing Terraform commands. This can be used for preparing authentication.
+        post_binares: A list of binaries to run after performing Terraform commands. This can be used for cleaning up authentication, or alternate resource lifecycles.
+        labels: The additonal labels to add to the build rule.
+        visibility: The targets to make the toolchain visible to.
+    """
+    # determine the terraform binary to use
+    toolchain = toolchain or TERRAFORM_DEFAULT_TOOLCHAIN
+
+    # create a root for terraform to use
+    root = _terraform_root(name, srcs, var_files, modules, toolchain)
+
+    # plugins only consist of providers at the moment
+    plugins = providers
+
+    plugins_bash_array = _to_bash_array("PLUGINS", [f"$(out_location {p})" for p in plugins])
+    pre_binary_bash_array = _to_bash_array("PRE_BINARIES", [f"$(out_exe {b})" for b in pre_binaries])
+    post_binary_bash_array = _to_bash_array("POST_BINARIES", [f"$(out_exe {b})" for b in post_binaries])
+
+    terraform_root_bin = sh_cmd(
+        name = f"{name}_bin",
+        shell = "/bin/bash",
+        cmd = f"""
+set -euo pipefail
+{_bash_version_check_cmd}
+OS="$OS"
+ARCH="$ARCH"
+PLZ_OUT_RELATIVE="$(echo $(out_location {root}) | cut -f1 -d/)"
+TERRAFORM_BIN="$(out_exe {toolchain})"
+TERRAFORM_ROOT="$(out_location {root})"
+{plugins_bash_array}
+{pre_binary_bash_array}
+{post_binary_bash_array}
+source "$(out_location {RUNNER_SRC})"
+        """,
+        data = [root, toolchain, RUNNER_SRC] + plugins + pre_binaries + post_binaries,
+        labels = [f"terraform_bin"] + labels,
+        visibility = visibility,
+    )
+
+    cmds = {
+        "plan": ["init", "plan"],
+        "apply": ["init", "apply"],
+        "destroy": ["init", "destroy"],
+    }
+    for k in cmds.keys():
+        commands = cmds[k]
+        cmd_bash_array = _to_bash_array("TERRAFORM_CMDS", commands)
+
+        sh_cmd(
+            name = f"{name}_{k}",
+            shell = "/bin/bash",
+            cmd = f"""
+set -euo pipefail
+{_bash_version_check_cmd}
+{cmd_bash_array}
+source "$(out_location {terraform_root_bin})"
+            """,
+            data = [terraform_root_bin, root, toolchain, RUNNER_SRC] + plugins + pre_binaries + post_binaries,
+            labels = [f"terraform_{k}"] + labels,
+            visibility = visibility,
+        )
+
+    _linters(name, terraform_root_bin, toolchain, root, labels, visibility)
+
+    return terraform_root_bin
+
+_bash_version_check_cmd = """
+if [ -z "${BASH_VERSINFO}" ] || [ -z "${BASH_VERSINFO[0]}" ] || [ ${BASH_VERSINFO[0]} -lt 4 ]; then
+    echo "This script requires Bash version >= 4"
+    exit 1
+fi
+"""
+
+def _to_bash_array(var_name:str, items:list):
+    bash_array=[f"{var_name}=()"]
+    bash_array+=[f"{var_name}+=({i})" for i in items]
+    return "\n".join(bash_array)
+
+def _to_bash_map(var_name:str, items:dict):
+    bash_map=[f"declare -A {var_name}"]
+    for k in items.keys():
+        v = items[k]
+        bash_map+=[f'{var_name}["{k}"]="{v}"']
+    return "\n".join(bash_map)
+
+def _terraform_root(
+    name: str,
+    srcs: list,
+    var_files: list = [],
+    modules: list = [],
+    toolchain: str = None,
+):
+    modules = [canonicalise(module) for module in modules]
+    module_paths = {m : f"$(out_location {m})" for m in modules}
+    module_paths_bash_map = _to_bash_map("MODULE_PATHS", module_paths)
+
+    return genrule(
+        name = f"_{name}_root",
+        outs = [f"_{name}_root"],
+        tools = [toolchain, WORKSPACE_BUILDER_SRC],
+        deps = modules,
+        exported_deps = modules,
+        needs_transitive_deps = True,
+        srcs = {
+            # srcs in other directories should be modules
+            "srcs": srcs,
+            "var_files": var_files,
+            "modules": modules,
+        },
+        cmd = f"""
+set -euo pipefail
+{_bash_version_check_cmd}
+CONFIG_OS="{CONFIG.OS}"
+CONFIG_ARCH="{CONFIG.ARCH}"
+TERRAFORM_BIN="$(out_exe {toolchain})"
+{module_paths_bash_map}
+source "$(location {WORKSPACE_BUILDER_SRC})"
+        """,
+    )
+
+def _linters(
+    name:str,
+    terraform_root_bin:str,
+    toolchain:str,
+    root:str,
+    labels:list,
+    visibility:list,
+):
+    linters = {
+        "validate": ["\"init -backend=false\"", "validate"],
+        "fmt": ["\"fmt -check -diff\""],
+    }
+    for k in linters.keys():
+        commands = linters[k]
+        cmd_bash_array = _to_bash_array("TERRAFORM_CMDS", commands)
+
+        sh_cmd(
+            name = f"{name}_{k}",
+            shell = "/bin/bash",
+            cmd = f"""
+set -euo pipefail
+{_bash_version_check_cmd}
+{cmd_bash_array}
+source "$(out_location {terraform_root_bin})"
+            """,
+            data = [terraform_root_bin, root, toolchain, RUNNER_SRC],
+            labels = [f"terraform_{k}", "lint"] + labels,
+            visibility = visibility,
+        )
