@@ -2,11 +2,13 @@
 Terraform integration w/ the Please build system.
 
 This includes support for the following:
- * `terraform_provider`: Terraform Providers
- * `terraform_module`: Terraform Remote Modules
- * `terraform_module`: Terraform Local Modules
- * `terraform_toolchain`: Multiple versions of Terraform
+ * `terraform_registry_provider`: Terraform Providers from the Terraform Registry.
+ * `terraform_registry_module`: Terraform Modules from the Terraform Registry.
+ * `terraform_module`: Terraform Modules from the local filesystem.
+   * TODO: These can be uploaded to a Terraform registry.
+ * `terraform_toolchain`: Multiple versions of Terraform.
  * Terraform fmt/validate
+ * TODO: [`terratest`](https://terratest.gruntwork.io/)
 
 
 ## `terraform_toolchain`

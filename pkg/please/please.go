@@ -1,4 +1,4 @@
-package plz
+package please
 
 import (
 	"log"

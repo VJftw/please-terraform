@@ -3,9 +3,9 @@ package(default_visibility = ["PUBLIC"])
 go_toolchain(
     name = "toolchain",
     hashes = [
-        "951a3c7c6ce4e56ad883f97d9db74d3d6d80d5fec77455c6ada6c1f7ac4776d2",  # linux-amd64
+        "dab7d9c34361dc21ec237d584590d72500652e7c909bf082758fb63064fca0ef",  # linux-amd64
     ],
-    version = "1.16.3",
+    version = "1.17.1",
 )
 
 go_module(
@@ -665,62 +665,49 @@ go_module(
     module = "github.com/google/go-cmp",
     version = "v0.5.5",
 )
+go_module(
+    name = "stretchr_testify",
+    install = [
+        "assert",
+        "require",
+    ],
+    licences = ["MIT"],
+    module = "github.com/stretchr/testify",
+    version = "54d05a4e18440fb0a44989ab910f347eac4a131f",
+    deps = [
+        ":davecgh_spew",
+        ":pmezard_difflib",
+        ":stretchr_objx",
+        ":yaml_v3",
+    ],
+)
 
-# go_module(
-#     name = "hashicorp_terraform-schema",
-#     module = "github.com/hashicorp/terraform-schema",
-#     version = "v0.0.0-20210522075401-0f5e258f5e97",
-#     licences = ["MPL-2.0"],
-#     install = [
-#         "internal/...",
-#         "schema",
-#     ],
-#     deps = [":hashicorp_hcl-lang", ":hashicorp_terraform-registry-address", ":hashicorp_terraform-json", ":zclconf_cty"],
-# )
+go_module(
+    name = "davecgh_spew",
+    install = ["spew"],
+    licences = ["ISC"],
+    module = "github.com/davecgh/go-spew",
+    version = "d8f796af33cc11cb798c1aaeb27a4ebc5099927d",
+)
 
-# go_module(
-#     name = "hashicorp_hcl-lang",
-#     module = "github.com/hashicorp/hcl-lang",
-#     version = "v0.0.0-20210522074354-f7480edf31b5",
-#     licences = ["MPL-2.0"],
-#     install = ["lang", "schema"],
-#     deps = [":zclconf_cty", ":hashicorp_hcl_v2", ":hashicorp_version", ":hashicorp_multierror"],
-# )
+go_module(
+    name = "pmezard_difflib",
+    install = ["difflib"],
+    module = "github.com/pmezard/go-difflib",
+    version = "5d4384ee4fb2527b0a1256a821ebfc92f91efefc",
+)
 
-# go_module(
-#     name = "hashicorp_multierror",
-#     module = "github.com/hashicorp/go-multierror",
-#     version = "v1.1.1",
-#     licences = ["MPL-2.0"],
-#     deps = [":hashicorp_errwrap"],
-# )
+go_module(
+    name = "stretchr_objx",
+    licences = ["MIT"],
+    module = "github.com/stretchr/objx",
+    version = "35313a95ee26395aa17d366c71a2ccf788fa69b6",
+    deps = [":davecgh_spew"],
+)
 
-# go_module(
-#     name = "hashicorp_errwrap",
-#     module = "github.com/hashicorp/errwrap",
-#     version = "v1.1.0",
-#     licences = ["MPL-2.0"],
-# )
-
-# go_module(
-#     name = "hashicorp_terraform-registry-address",
-#     module = "github.com/hashicorp/terraform-registry-address",
-#     version = "v0.0.0-20210412075316-9b2996cce896",
-#     deps = [":hashicorp_terraform-svchost"]
-# )
-
-# go_module(
-#     name = "hashicorp_terraform-svchost",
-#     module = "github.com/hashicorp/terraform-svchost",
-#     version = "v0.0.0-20200729002733-f050f53b9734",
-#     licences = ["MPL-2.0"],
-#     deps = [":x_net"]
-# )
-
-# go_module(
-#     name = "hashicorp_terraform-json",
-#     module = "github.com/hashicorp/terraform-json",
-#     version = "v0.11.0",
-#     licences = ["MPL-2.0"],
-#     deps = [":x_net", ":zclconf_cty"]
-# )
+go_module(
+    name = "yaml_v3",
+    licences = ["Apache-2.0"],
+    module = "gopkg.in/yaml.v3",
+    version = "496545a6307b2a7d7a710fd516e5e16e8ab62dbc",
+)

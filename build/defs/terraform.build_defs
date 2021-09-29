@@ -1,13 +1,8 @@
 """Build rules for working with Hashicorp Terraform (https://terraform.io)
 """
 
-TERRAFORM_DEFAULT_TOOLCHAIN = CONFIG.get('TERRAFORM_DEFAULT_TOOLCHAIN') or "//third_party/binary:terraform"
-
-MODULE_BUILDER_SRC = CONFIG.get('TERRAFORM_MODULE_BUILDER_SRC') or "//third_party/defs:_terraform_module_builder"
-RUNNER_SRC = CONFIG.get('TERRAFORM_RUNNER_SRC') or "//third_party/defs:_terraform_runner"
-WORKSPACE_BUILDER_SRC = CONFIG.get('TERRAFORM_WORKSPACE_BUILDER_SRC') or "//third_party/defs:_terraform_workspace_builder"
-
-PLEASE_TERRAFORM_TOOL = CONFIG.get('PLEASE_TERRAFORM_TOOL') or "//third_party/defs:_terraform_module_builder"
+TERRAFORM_DEFAULT_TOOLCHAIN = CONFIG.TERRAFORM.DEFAULT_TOOLCHAIN or "//third_party/binary:terraform"
+TERRAFORM_PLZ_TOOL = CONFIG.TERRAFORM.TOOL or "//third_party/terraform:plz"
 
 def terraform_toolchain(
     name:str,
@@ -34,7 +29,7 @@ def terraform_toolchain(
     return genrule(
         name=name,
         srcs=[download],
-        # Output into a directory so that we can add `terraform` to the $PATH at runtime.
+        # We output into a directory so we can add `terraform` to the PATH at runtime.
         outs=[f"_{name}_download/terraform"],
         cmd="mkdir -p $(dirname $OUTS) && mv $SRCS/terraform $OUTS",
         visibility = visibility,
@@ -62,12 +57,12 @@ def terraform_registry_provider(
         name = name,
         sandbox = False,
         outs = [name],
-        tools = [PLEASE_TERRAFORM_TOOL],
+        tools = [TERRAFORM_PLZ_TOOL],
         srcs = [],
         exit_on_error = True,
         hashes = hashes,
         cmd = f"""
-$TOOLS -vvvvv terraformregistryprovider build \\
+$TOOLS -vvvvv provider registry \\
     --registry="{registry}" \\
     --namespace="{provider_namespace}" \\
     --type="{provider_type}" \\
@@ -93,6 +88,7 @@ def terraform_registry_module(
     labels: list = [],
     visibility: list = [],
 ):
+
     deps=[canonicalise(dep) for dep in deps]
 
     mod_namespace=module.split("/")[0]
@@ -112,14 +108,14 @@ def terraform_registry_module(
         name = name,
         sandbox = False,
         outs = [name],
-        tools = [PLEASE_TERRAFORM_TOOL],
+        tools = [TERRAFORM_PLZ_TOOL],
         deps = deps,
         exported_deps = deps,
         exit_on_error = True,
         hashes = hashes,
         visibility = visibility,
         cmd = f"""
-$TOOLS -vvvvv terraformregistrymodule build \\
+$TOOLS -vvvvv module registry \\
     --registry="{registry}" \\
     --namespace="{mod_namespace}" \\
     --name="{mod_name}" \\
@@ -128,12 +124,8 @@ $TOOLS -vvvvv terraformregistrymodule build \\
     --out="$OUTS" \\
     --pkg="$PKG" \\
     {strip_cmd} {deps_cmd} {aliases_cmd}
-
-# strip git dir for consistent hashes
-rm -rf $OUTS/.git
 """,
     )
-
 
 def terraform_module(
     name: str,
@@ -142,7 +134,7 @@ def terraform_module(
     labels: list = [],
     visibility: list = [],
 ):
-    """Build rule for defining a local Terraform module.
+    """Build rule for obtaining a remote Terraform Module or defining a local Terraform module.
     Args:
         name: The name of the build rule.
         srcs: The source Terraform files for the Terraform module.
@@ -151,32 +143,24 @@ def terraform_module(
         visibility: The targets to make the toolchain visible to.
     """
     deps=[canonicalise(dep) for dep in deps]
-
-    og_module=genrule(
-        name = f"_{name}_srcs",
-        srcs = srcs,
-        outs = [f"_{name}_srcs"],
-        deps = deps,
-        # srcs in other directories should be modules... no, this shouldnt flatten modules.
-        cmd = "mkdir $OUTS && for src in $SRCS; do cp $src $OUTS/; done",
-    )
-
-    deps_flags = [f"--dependency_paths=\"$(location {dep}):$(out_location {dep})\"" for dep in deps]
-    deps_cmd = " ".join(deps_flags)
+    deps_csv_array = _to_csv_array([f"$(location {dep})" for dep in deps])
 
     genrule(
         name = name,
-        srcs = [og_module],
+        srcs = srcs,
         outs = [name],
         exported_deps=deps,
         deps=deps,
         visibility=visibility,
-        tools=[PLEASE_TERRAFORM_TOOL],
+        tools=[TERRAFORM_PLZ_TOOL],
         cmd = f"""
-$TOOLS terraformmodule build \\
-    --module_directory "$(location {og_module})" \\
-    --out "$OUTS" \\
-    {deps_cmd}
+$TOOLS module local \\
+    --aliases="$PKG:$NAME" \\
+    --pkg="$PKG" \\
+    --name="$NAME" \\
+    --srcs="$SRCS" \\
+    --out="$OUTS" \\
+    --deps="{deps_csv_array}"
         """,
     )
 
@@ -208,33 +192,31 @@ def terraform_root(
     # determine the terraform binary to use
     toolchain = toolchain or TERRAFORM_DEFAULT_TOOLCHAIN
 
-    # create a root for terraform to use
+    # generate a root module to run terraform against
     root = _terraform_root(name, srcs, var_files, modules, toolchain)
 
     # plugins only consist of providers at the moment
     plugins = providers
 
-    plugins_bash_array = _to_bash_array("PLUGINS", [f"$(out_location {p})" for p in plugins])
-    pre_binary_bash_array = _to_bash_array("PRE_BINARIES", [f"$(out_exe {b})" for b in pre_binaries])
-    post_binary_bash_array = _to_bash_array("POST_BINARIES", [f"$(out_exe {b})" for b in post_binaries])
+    plugins_csv_array = _to_csv_array([f"$(out_location {p})" for p in plugins])
+    pre_binary_csv_array = _to_csv_array([f"$(out_exe {b})" for b in pre_binaries])
+    post_binary_csv_array = _to_csv_array([f"$(out_exe {b})" for b in post_binaries])
 
     terraform_root_bin = sh_cmd(
         name = f"{name}_bin",
         shell = "/bin/bash",
         cmd = f"""
-set -euo pipefail
-{_bash_version_check_cmd}
-OS="$OS"
-ARCH="$ARCH"
-PLZ_OUT_RELATIVE="$(echo $(out_location {root}) | cut -f1 -d/)"
-TERRAFORM_BIN="$(out_exe {toolchain})"
-TERRAFORM_ROOT="$(out_location {root})"
-{plugins_bash_array}
-{pre_binary_bash_array}
-{post_binary_bash_array}
-source "$(out_location {RUNNER_SRC})"
+$(out_location {TERRAFORM_PLZ_TOOL}) run \\\\
+    --terraform-binary="$(out_exe {toolchain})" \\\\
+    --os="$OS" \\\\
+    --arch="$ARCH" \\\\
+    --terraform-root="$(out_location {root})" \\\\
+    --plugins="{plugins_csv_array}" \\\\
+    --pre-binaries="{pre_binary_csv_array}" \\\\
+    --post-binaries="{post_binary_csv_array}" \\\\
+    --extra-args="\\\$*"
         """,
-        data = [root, toolchain, RUNNER_SRC] + plugins + pre_binaries + post_binaries,
+        data = [root, toolchain, TERRAFORM_PLZ_TOOL] + plugins + pre_binaries + post_binaries,
         labels = [f"terraform_bin"] + labels,
         visibility = visibility,
     )
@@ -246,18 +228,12 @@ source "$(out_location {RUNNER_SRC})"
     }
     for k in cmds.keys():
         commands = cmds[k]
-        cmd_bash_array = _to_bash_array("TERRAFORM_CMDS", commands)
 
         sh_cmd(
             name = f"{name}_{k}",
             shell = "/bin/bash",
-            cmd = f"""
-set -euo pipefail
-{_bash_version_check_cmd}
-{cmd_bash_array}
-source "$(out_location {terraform_root_bin})"
-            """,
-            data = [terraform_root_bin, root, toolchain, RUNNER_SRC] + plugins + pre_binaries + post_binaries,
+            cmd = _terraform_cmds_to_bash(terraform_root_bin, commands),
+            data = [terraform_root_bin, root, toolchain, TERRAFORM_PLZ_TOOL] + plugins + pre_binaries + post_binaries,
             labels = [f"terraform_{k}"] + labels,
             visibility = visibility,
         )
@@ -266,24 +242,21 @@ source "$(out_location {terraform_root_bin})"
 
     return terraform_root_bin
 
-_bash_version_check_cmd = """
-if [ -z "${BASH_VERSINFO}" ] || [ -z "${BASH_VERSINFO[0]}" ] || [ ${BASH_VERSINFO[0]} -lt 4 ]; then
-    echo "This script requires Bash version >= 4"
-    exit 1
-fi
-"""
+def _to_csv_array(items:list):
+    return ",".join(items)
 
-def _to_bash_array(var_name:str, items:list):
-    bash_array=[f"{var_name}=()"]
-    bash_array+=[f"{var_name}+=({i})" for i in items]
-    return "\n".join(bash_array)
-
-def _to_bash_map(var_name:str, items:dict):
-    bash_map=[f"declare -A {var_name}"]
+def _to_csv_map(items:dict):
+    associative_list=[]
     for k in items.keys():
         v = items[k]
-        bash_map+=[f'{var_name}["{k}"]="{v}"']
-    return "\n".join(bash_map)
+        associative_list += [f'{k}={v}']
+
+    return _to_csv_array(associative_list)
+
+def _terraform_cmds_to_bash(terraform_root_bin: str, cmds: list):
+    cmds_to_run_for_key = [f"$(out_exe {terraform_root_bin}) {cmd}" for cmd in cmds]
+    cmds_to_run = "\n".join(cmds_to_run_for_key)
+    return f"{cmds_to_run} \\\$@",
 
 def _terraform_root(
     name: str,
@@ -294,29 +267,29 @@ def _terraform_root(
 ):
     modules = [canonicalise(module) for module in modules]
     module_paths = {m : f"$(out_location {m})" for m in modules}
-    module_paths_bash_map = _to_bash_map("MODULE_PATHS", module_paths)
+    module_paths_csv_map = _to_csv_map(module_paths)
+    srcs_csv = _to_csv_array([f"$(location {src})" for src in srcs])
+    var_files_csv = _to_csv_array([f"$(location {var_file})" for var_file in var_files])
 
     return genrule(
         name = f"_{name}_root",
         outs = [f"_{name}_root"],
-        tools = [toolchain, WORKSPACE_BUILDER_SRC],
+        tools = [TERRAFORM_PLZ_TOOL],
         deps = modules,
         exported_deps = modules,
         needs_transitive_deps = True,
-        srcs = {
-            # srcs in other directories should be modules
-            "srcs": srcs,
-            "var_files": var_files,
-            "modules": modules,
-        },
+        srcs = srcs + var_files + modules,
         cmd = f"""
-set -euo pipefail
-{_bash_version_check_cmd}
-CONFIG_OS="{CONFIG.OS}"
-CONFIG_ARCH="{CONFIG.ARCH}"
-TERRAFORM_BIN="$(out_exe {toolchain})"
-{module_paths_bash_map}
-source "$(location {WORKSPACE_BUILDER_SRC})"
+$TOOLS build_workspace \\
+    --pkg="$PKG" \\
+    --name="$NAME" \\
+    --os="{CONFIG.OS}" \\
+    --arch="{CONFIG.ARCH}" \\
+    --out="$OUTS" \\
+    --pkg-dir="$PKG_DIR" \\
+    --srcs="{srcs_csv}" \\
+    --var_files="{var_files_csv}" \\
+    --module-paths="{module_paths_csv_map}"
         """,
     )
 
@@ -329,23 +302,17 @@ def _linters(
     visibility:list,
 ):
     linters = {
-        "validate": ["\"init -backend=false\"", "validate"],
-        "fmt": ["\"fmt -check -diff\""],
+        "validate": ["init -backend=false", "validate"],
+        "fmt": ["fmt -check -diff"],
     }
     for k in linters.keys():
         commands = linters[k]
-        cmd_bash_array = _to_bash_array("TERRAFORM_CMDS", commands)
 
         sh_cmd(
             name = f"{name}_{k}",
             shell = "/bin/bash",
-            cmd = f"""
-set -euo pipefail
-{_bash_version_check_cmd}
-{cmd_bash_array}
-source "$(out_location {terraform_root_bin})"
-            """,
-            data = [terraform_root_bin, root, toolchain, RUNNER_SRC],
+            cmd = _terraform_cmds_to_bash(terraform_root_bin, commands),
+            data = [terraform_root_bin, root, toolchain, TERRAFORM_PLZ_TOOL],
             labels = [f"terraform_{k}", "lint"] + labels,
             visibility = visibility,
         )

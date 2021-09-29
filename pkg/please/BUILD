@@ -1,8 +1,7 @@
 go_library(
-    name = "plz",
+    name = "please",
     srcs = [
-        "plz.go",
-        "repo-root.go",
+        "please.go",
     ],
     visibility = ["//pkg/..."],
 )

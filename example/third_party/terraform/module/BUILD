@@ -33,8 +33,8 @@ terraform_registry_module(
     visibility = ["PUBLIC"],
     deps = [
         ":cloudposse_null_label_0_12",
-        "//example/third_party/terraform/provider:aws",
-        "//example/third_party/terraform/provider:local",
+        # "//example/third_party/terraform/provider:aws",
+        # "//example/third_party/terraform/provider:local",
     ],
 )
 
@@ -44,6 +44,6 @@ terraform_registry_module(
     strip = ["examples"],
     version = "4.0.0",
     deps = [
-        "//example/third_party/terraform/provider:aws",
+        # "//example/third_party/terraform/provider:aws",
     ],
 )
