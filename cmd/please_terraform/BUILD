@@ -3,9 +3,10 @@ go_binary(
     srcs = ["main.go"],
     visibility = ["PUBLIC"],
     deps = [
+        "//internal/cmd",
         "//pkg/module",
         "//pkg/provider",
+        "//pkg/run",
         "//pkg/workspace",
-        "//internal/cmd",
     ],
 )

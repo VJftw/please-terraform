@@ -194,8 +194,7 @@ def terraform_root(
     toolchain = toolchain or TERRAFORM_DEFAULT_TOOLCHAIN
 
     # generate a root module to run terraform against
-    deps = modules + providers
-    root = _terraform_root(name, srcs, var_files, deps, toolchain)
+    root = _terraform_root(name, srcs, var_files, modules, toolchain)
 
     # plugins only consist of providers at the moment
     plugins = providers
@@ -208,15 +207,17 @@ def terraform_root(
         name = f"{name}_bin",
         shell = "/bin/bash",
         cmd = f"""
-$(out_location {TERRAFORM_PLZ_TOOL}) run \\\\
-    --terraform-binary="$(out_exe {toolchain})" \\\\
+$(out_exe {TERRAFORM_PLZ_TOOL}) -vvvvv run \\\\
+    --terraform_binary="$(out_exe {toolchain})" \\\\
+    --pkg="$PKG" \\\\
+    --name="$NAME" \\\\
     --os="$OS" \\\\
     --arch="$ARCH" \\\\
-    --terraform-root="$(out_location {root})" \\\\
+    --terraform_root="$(out_location {root})" \\\\
     --plugins="{plugins_csv_array}" \\\\
-    --pre-binaries="{pre_binary_csv_array}" \\\\
-    --post-binaries="{post_binary_csv_array}" \\\\
-    --extra-args="\\\$*"
+    --pre_binaries="{pre_binary_csv_array}" \\\\
+    --post_binaries="{post_binary_csv_array}" \\\\
+    --extra_args="\\\$*"
         """,
         data = [root, toolchain, TERRAFORM_PLZ_TOOL] + plugins + pre_binaries + post_binaries,
         labels = [f"terraform_bin"] + labels,
@@ -264,21 +265,21 @@ def _terraform_root(
     name: str,
     srcs: list,
     var_files: list = [],
-    deps: list = [],
+    modules: list = [],
     toolchain: str = None,
 ):
     srcs_csv = _to_csv_array([f"$(location {src})" for src in srcs])
     var_files_csv = _to_csv_array([f"$(location {var_file})" for var_file in var_files])
 
-    deps_flags = [f"--deps=\"$(location {d})\"" for d in deps]
-    deps_cmd = " ".join(deps_flags)
+    modules_flags = [f"--modules=\"$(location {m})\"" for m in modules]
+    modules_cmd = " ".join(modules_flags)
 
     return genrule(
         name = f"_{name}_root",
         outs = [f"_{name}_root"],
         tools = [TERRAFORM_PLZ_TOOL],
-        deps = deps,
-        exported_deps = deps,
+        deps = modules,
+        exported_deps = modules,
         needs_transitive_deps = True,
         srcs = srcs + var_files,
         cmd = f"""
@@ -291,7 +292,7 @@ $TOOLS workspace -vvvvv \\
     --pkg_dir="$PKG_DIR" \\
     --srcs="{srcs_csv}" \\
     --var_files="{var_files_csv}" \\
-    {deps_cmd}
+    {modules_cmd}
         """,
     )
 

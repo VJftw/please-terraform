@@ -11,6 +11,6 @@ go_library(
     deps = [
         "//internal/logging",
         "//pkg/please",
-         "//third_party/go:hashicorp_getter",
-    ]
+        "//third_party/go:hashicorp_getter",
+    ],
 )

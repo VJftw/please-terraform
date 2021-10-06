@@ -44,6 +44,7 @@ func Load(directory string) (*Provider, error) {
 
 // Save saves the Provider data to be re-used in other builds.
 func (p *Provider) Save() error {
+	// TODO: add APIVersion and Kind to Provider (e.g. terraform.please.build/v1/Provider)
 	fileBytes, err := json.MarshalIndent(p, "", "  ")
 	if err != nil {
 		return fmt.Errorf("could not marshal module: %w", err)

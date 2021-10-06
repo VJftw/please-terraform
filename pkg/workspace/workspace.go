@@ -27,7 +27,7 @@ type Workspace struct {
 
 	SrcsCSV     string   `long:"srcs"`
 	VarFilesCSV string   `long:"var_files"`
-	Deps        []string `long:"deps"`
+	Modules     []string `long:"modules"`
 
 	Out          string `long:"out" description:""`
 	AbsolutePath string
@@ -50,8 +50,8 @@ func (c *Command) Execute(args []string) error {
 
 	// configure modules
 	// Terraform modules via Please work by determining the absolute path to the module source and updating the references to it.
-	for _, dep := range c.Deps {
-		depModule, err := module.Load(dep)
+	for _, moduleDir := range c.Modules {
+		depModule, err := module.Load(moduleDir)
 		if err != nil {
 			return err
 		}
@@ -94,3 +94,5 @@ func (c *Command) Execute(args []string) error {
 
 	return nil
 }
+
+// TODO: add APIVersion and Kind to Workspace (e.g. terraform.please.build/v1/Workspace)

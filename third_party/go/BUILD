@@ -665,6 +665,7 @@ go_module(
     module = "github.com/google/go-cmp",
     version = "v0.5.5",
 )
+
 go_module(
     name = "stretchr_testify",
     install = [

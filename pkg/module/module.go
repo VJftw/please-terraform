@@ -50,6 +50,7 @@ func Load(directory string) (*Module, error) {
 
 // Save saves the Module data to be re-used in other builds.
 func (m *Module) Save() error {
+	// TODO: add APIVersion and Kind to Module (e.g. terraform.please.build/v1/Module)
 	fileBytes, err := json.MarshalIndent(m, "", "  ")
 	if err != nil {
 		return fmt.Errorf("could not marshal module: %w", err)

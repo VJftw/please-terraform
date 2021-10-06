@@ -1,14 +1,13 @@
 go_library(
-    name = "workspace",
+    name = "run",
     srcs = [
-        "workspace.go",
+        "run.go",
     ],
     visibility = [
         "//cmd/...",
     ],
     deps = [
         "//internal/logging",
-        "//pkg/module",
         "//pkg/please",
     ],
 )
