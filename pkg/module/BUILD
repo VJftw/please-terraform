@@ -5,7 +5,7 @@ go_library(
         "local.go",
         "registry.go",
     ],
-    visibility = ["//cmd/..."],
+    visibility = ["//cmd/...", "//pkg/..."],
     deps = [
         "//internal/logging",
         "//pkg/please",

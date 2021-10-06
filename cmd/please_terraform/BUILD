@@ -5,6 +5,7 @@ go_binary(
     deps = [
         "//pkg/module",
         "//pkg/provider",
+        "//pkg/workspace",
         "//internal/cmd",
     ],
 )

@@ -143,7 +143,8 @@ def terraform_module(
         visibility: The targets to make the toolchain visible to.
     """
     deps=[canonicalise(dep) for dep in deps]
-    deps_csv_array = _to_csv_array([f"$(location {dep})" for dep in deps])
+    deps_flags = [f"--deps=\"$(location {d})\"" for d in deps]
+    deps_cmd = " ".join(deps_flags)
 
     genrule(
         name = name,
@@ -154,13 +155,13 @@ def terraform_module(
         visibility=visibility,
         tools=[TERRAFORM_PLZ_TOOL],
         cmd = f"""
-$TOOLS module local \\
-    --aliases="$PKG:$NAME" \\
+$TOOLS -vvvvv module local \\
+    --aliases="//$PKG:$NAME" \\
     --pkg="$PKG" \\
     --name="$NAME" \\
     --srcs="$SRCS" \\
     --out="$OUTS" \\
-    --deps="{deps_csv_array}"
+    {deps_cmd}
         """,
     )
 
@@ -193,7 +194,8 @@ def terraform_root(
     toolchain = toolchain or TERRAFORM_DEFAULT_TOOLCHAIN
 
     # generate a root module to run terraform against
-    root = _terraform_root(name, srcs, var_files, modules, toolchain)
+    deps = modules + providers
+    root = _terraform_root(name, srcs, var_files, deps, toolchain)
 
     # plugins only consist of providers at the moment
     plugins = providers
@@ -262,34 +264,34 @@ def _terraform_root(
     name: str,
     srcs: list,
     var_files: list = [],
-    modules: list = [],
+    deps: list = [],
     toolchain: str = None,
 ):
-    modules = [canonicalise(module) for module in modules]
-    module_paths = {m : f"$(out_location {m})" for m in modules}
-    module_paths_csv_map = _to_csv_map(module_paths)
     srcs_csv = _to_csv_array([f"$(location {src})" for src in srcs])
     var_files_csv = _to_csv_array([f"$(location {var_file})" for var_file in var_files])
+
+    deps_flags = [f"--deps=\"$(location {d})\"" for d in deps]
+    deps_cmd = " ".join(deps_flags)
 
     return genrule(
         name = f"_{name}_root",
         outs = [f"_{name}_root"],
         tools = [TERRAFORM_PLZ_TOOL],
-        deps = modules,
-        exported_deps = modules,
+        deps = deps,
+        exported_deps = deps,
         needs_transitive_deps = True,
-        srcs = srcs + var_files + modules,
+        srcs = srcs + var_files,
         cmd = f"""
-$TOOLS build_workspace \\
+$TOOLS workspace -vvvvv \\
     --pkg="$PKG" \\
     --name="$NAME" \\
     --os="{CONFIG.OS}" \\
     --arch="{CONFIG.ARCH}" \\
     --out="$OUTS" \\
-    --pkg-dir="$PKG_DIR" \\
+    --pkg_dir="$PKG_DIR" \\
     --srcs="{srcs_csv}" \\
     --var_files="{var_files_csv}" \\
-    --module-paths="{module_paths_csv_map}"
+    {deps_cmd}
         """,
     )
 

@@ -8,8 +8,11 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"github.com/VJftw/please-terraform/internal/logging"
 	"github.com/VJftw/please-terraform/pkg/please"
 )
+
+var log = logging.NewLogger()
 
 type Command struct {
 	Local    *LocalCommand    `command:"local"`
@@ -95,6 +98,10 @@ func (m *Module) UpdateReferences(directory string) error {
 	err := filepath.Walk(directory, func(path string, fi os.FileInfo, err error) error {
 		for _, alias := range m.Aliases {
 			if filepath.Ext(path) == ".tf" {
+				log.Debug().
+					Str("path", path).
+					Str("alias", alias).
+					Msg("replacing module sources")
 				pattern := fmt.Sprintf(`source\s*=\s*"%s"`, alias)
 				re := regexp.MustCompile(pattern)
 				tfContents, err := os.ReadFile(path)
