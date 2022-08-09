@@ -8,17 +8,24 @@ gotool = //third_party/go:toolchain|go
 ; Define the Plugin configuration options.
 [PluginDefinition]
 Name = terraform
-Description = "A Please plugin for working with Terraform"
+Description = "A Please plugin for working with Terraform."
 BuildDefsDir = "build/defs"
-
-[PluginConfig "tool"]
-ConfigKey = Tool
-Optional = false
 
 [PluginConfig "default_toolchain"]
 ConfigKey = DefaultToolchain
-DefaultValue = ""
 Optional = true
+Help = "Sets the given Please target as the Default Terraform Toolchain to use with terraform_roots."
+
+[PluginConfig "tool"]
+ConfigKey = Tool
+DefaultValue = "//third_party/binary:please_terraform"
+Inherit = true
+Help = "Sets the given Please target as the Tool which the Terraform build_defs use to build Terraform configuration. Leaving this as the default and setting ToolVersion will utilise pre-built binaries from GitHub Releases."
+
+[PluginConfig "tool_version"]
+ConfigKey = ToolVersion
+Optional = true
+Help = "In conjunction with the default value for Tool, this sets the version of the Tool which should be downloaded from GitHub Releases."
 
 ; Use the plugin in this repository for tests.
 [Plugin "terraform"]

@@ -95,14 +95,14 @@ See `//example/<version>/BUILD` for examples of `terraform_root`.
 ### Please Plugin
 
 ```ini
-# .plzconfig
+; .plzconfig
 
-## Support the please-* format of Please plugins.
+; Support the non *-rules repo name format of Please plugins.
 PluginRepo = ["https://github.com/{owner}/{plugin}/archive/{revision}.zip"]
 
 [Plugin "terraform"]
 Target = //third_party/plugins:terraform
-Tool = //third_party/plugins:terraform_tool
+ToolVersion = "v0.0.1" ; Skipping ToolVersion will build the Tool from source.
 ```
 
 ```python
@@ -111,14 +111,7 @@ plugin_repo(
     name = "terraform",
     owner = "VJftw",
     plugin = "please-terraform",
-    revision = "<version>",
-)
-
-remote_file(
-    name = "terraform_tool",
-    url = f"https://github.com/VJftw/please-terraform/releases/download/<version>/please-terraform"
-    visibility = ["PUBLIC"],
-    binary = True,
+    revision = "v0.0.1",
 )
 ```
 
