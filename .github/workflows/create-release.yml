@@ -22,3 +22,14 @@ jobs:
             -a ${{ github.event.inputs.version }} \
             -m ${{ github.event.inputs.version }}
           git push origin --tags
+
+      - name: Build
+        run: |-
+          ./pleasew build -p -v=2 \
+            --arch linux_amd64 \
+            //cmd/please_terraform:please_terraform
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: plz-out/bin/cmd/please_terraform/please_terraform
