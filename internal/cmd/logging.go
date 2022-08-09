@@ -7,7 +7,7 @@ import (
 
 // LoggingOpts represents the available logging options for command line tools.
 type LoggingOpts struct {
-	Verbose []bool `short:"v" long:"verbose" description:"Show verbose debug information"`
+	Verbose []bool `short:"v" long:"verbose" description:"Show verbose debug information" env:"PLEASE_TERRAFORM_VERBOSE" env-delim:";"`
 }
 
 func configureLoggingFromOpts(opts *LoggingOpts) {

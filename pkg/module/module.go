@@ -2,11 +2,9 @@ package module
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 
 	"github.com/VJftw/please-terraform/internal/logging"
 	"github.com/VJftw/please-terraform/pkg/please"
@@ -14,76 +12,51 @@ import (
 
 var log = logging.NewLogger()
 
-type Command struct {
-	Local    *LocalCommand    `command:"local"`
-	Registry *RegistryCommand `command:"registry"`
+// Metadata represents a module's metadata.
+type Metadata struct {
+	Target  string
+	Aliases []string
 }
 
-type Module struct {
-	Aliases []string `long:"aliases" description:""`
-	Pkg     string   `long:"pkg" description:""`
-	Strip   []string `long:"strip" description:""`
-	Deps    []string `long:"deps" description:""`
-	Out     string   `long:"out" description:""`
-
-	AbsolutePath string
-}
-
-// Load returns a Module loaded from the given directory.
-func Load(directory string) (*Module, error) {
-	fileBytes, err := os.ReadFile(filepath.Join(directory, ".please_terraform.json"))
+// Load returns a module's Metadata loaded from the given directory.
+func Load(path string) (*Metadata, error) {
+	fileBytes, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("could not read saved module: %w", err)
 	}
 
-	m := &Module{}
+	m := &Metadata{}
 	if err := json.Unmarshal(fileBytes, m); err != nil {
 		return nil, fmt.Errorf("could not unmarshal saved module: %w", err)
-	}
-
-	if m.AbsolutePath == "" {
-		return nil, errors.New("absolute path missing from loaded module")
 	}
 
 	return m, nil
 }
 
-// Save saves the Module data to be re-used in other builds.
-func (m *Module) Save() error {
-	// TODO: add APIVersion and Kind to Module (e.g. terraform.please.build/v1/Module)
+// Save saves the Metadata data to be re-used in other workflows.
+func (m *Metadata) Save(path string) error {
 	fileBytes, err := json.MarshalIndent(m, "", "  ")
 	if err != nil {
 		return fmt.Errorf("could not marshal module: %w", err)
 	}
 
-	return os.WriteFile(filepath.Join(m.Out, ".please_terraform.json"), fileBytes, 0644)
-}
-
-// Build prepares the module to be used by Please.
-func (m *Module) Build() error {
-	m.AbsolutePath = filepath.Join(please.MustAbsPlzOut(m.Pkg), "gen", m.Pkg, m.Out)
-
-	if err := m.StripDirs(); err != nil {
-		return err
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0750); err != nil {
+		return fmt.Errorf("could not create directory '%s': %w", dir, err)
 	}
 
-	for _, dep := range m.Deps {
-		depModule, err := Load(dep)
-		if err != nil {
-			return err
-		}
-		if err := depModule.UpdateReferences(m.Out); err != nil {
-			return err
-		}
+	if err := os.WriteFile(path, fileBytes, 0644); err != nil {
+		return fmt.Errorf("could not write '%s': %w", path, err)
 	}
 
-	return m.Save()
+	log.Debug().Str("file", path).Msg("saved module metadata")
+	return nil
 }
 
-// Strip strips the configured directories from the module.
-func (m *Module) StripDirs() error {
-	for _, stripDir := range m.Strip {
-		stripPath := filepath.Join(m.Out, stripDir)
+// StripDirs strips the configured directories from the module.
+func (m *Metadata) StripDirs(out string, strip []string) error {
+	for _, stripDir := range strip {
+		stripPath := filepath.Join(out, stripDir)
 		if err := os.RemoveAll(stripPath); err != nil {
 			return fmt.Errorf("could not remove directory '%s': %w", stripDir, err)
 		}
@@ -92,36 +65,41 @@ func (m *Module) StripDirs() error {
 	return nil
 }
 
-// UpdateReferences replaces all references to this Module's Aliases to it's absolute path in the given directory.
-func (m *Module) UpdateReferences(directory string) error {
-	versionRE := regexp.MustCompile(`version\s*=\s*"[^\n"]*"`)
+// ColocateModules colocates the given module paths to the given out directory.
+func ColocateModules(metadataFilePath string, out string, modulePaths []string) error {
+	log.Debug().Strs("modulePaths", modulePaths).Msg("colocating modules")
+	if len(modulePaths) < 1 {
+		log.Debug().Msg("no modules to colocate")
+		return nil
+	}
 
-	err := filepath.Walk(directory, func(path string, fi os.FileInfo, err error) error {
-		for _, alias := range m.Aliases {
-			if filepath.Ext(path) == ".tf" {
-				log.Debug().
-					Str("path", path).
-					Str("alias", alias).
-					Msg("replacing module sources")
-				pattern := fmt.Sprintf(`source\s*=\s*"%s"`, alias)
-				re := regexp.MustCompile(pattern)
-				tfContents, err := os.ReadFile(path)
-				if err != nil {
-					return fmt.Errorf("could not read '%s': %w", path, err)
-				}
+	modulesDir := filepath.Join(out, ".modules")
+	if err := os.MkdirAll(modulesDir, 0750); err != nil {
+		return fmt.Errorf("could not create modules dir '%s': %w", modulesDir, err)
+	}
 
-				newContents := re.ReplaceAll(tfContents, []byte(fmt.Sprintf("source = \"%s\"", m.AbsolutePath)))
-				newContents = versionRE.ReplaceAll(newContents, []byte{})
-				if err := os.WriteFile(path, newContents, 0644); err != nil {
-					return fmt.Errorf("could not write file '%s': %w", path, err)
-				}
+	for _, modulePath := range modulePaths {
+		replace := filepath.Join(".modules", modulePath)
+
+		moduleMeta, err := Load(filepath.Join(modulePath, metadataFilePath))
+		if err != nil {
+			return err
+		}
+
+		for _, alias := range moduleMeta.Aliases {
+			log.Debug().Str("alias", alias).Str("path", replace).Msg("replacing in module")
+			if err := please.ReplaceInDirectory(out, alias, replace); err != nil {
+				return err
 			}
 		}
-		return nil
-	})
 
-	if err != nil {
-		return fmt.Errorf("could not walk files: %w", err)
+		if err := os.MkdirAll(filepath.Dir(filepath.Join(out, replace)), 0750); err != nil {
+			return err
+		}
+		if err := please.Sync(modulePath, filepath.Join(out, replace), []string{}); err != nil {
+			return err
+		}
 	}
+
 	return nil
 }

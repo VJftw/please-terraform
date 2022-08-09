@@ -3,9 +3,9 @@ package(default_visibility = ["PUBLIC"])
 go_toolchain(
     name = "toolchain",
     hashes = [
-        "dab7d9c34361dc21ec237d584590d72500652e7c909bf082758fb63064fca0ef",  # linux-amd64
+        "9e5de37f9c49942c601b191ac5fba404b868bfc21d446d6960acc12283d6e5f2",  # linux-amd64
     ],
-    version = "1.17.1",
+    version = "1.18.5",
 )
 
 go_module(
@@ -570,100 +570,6 @@ go_module(
     licences = ["MIT"],
     module = "github.com/mitchellh/go-homedir",
     version = "v1.1.0",
-)
-
-go_module(
-    name = "hashicorp_hcl_v1",
-    install = [
-        ".",
-        "hcl/ast",
-        "hcl/parser",
-    ],
-    licences = ["MPL-2.0"],
-    module = "github.com/hashicorp/hcl",
-    version = "v1.0.0",
-)
-
-go_module(
-    name = "hashicorp_hcl_v2",
-    install = [
-        ".",
-        # "hclparse",
-        "hclsyntax",
-        # "json",
-        "ext/customdecode",
-        "hclwrite",
-        "hcl",
-    ],
-    licences = ["MPL-2.0"],
-    module = "github.com/hashicorp/hcl/v2",
-    version = "v2.10.0",
-    deps = [
-        ":agext_levenshtein",
-        ":google_cmp",
-        ":mitchellh_wordwrap",
-        ":zclconf_cty",
-    ],
-)
-
-go_module(
-    name = "mitchellh_wordwrap",
-    licences = ["MIT"],
-    module = "github.com/mitchellh/go-wordwrap",
-    version = "v1.0.1",
-)
-
-go_module(
-    name = "zclconf_cty",
-    install = [
-        "cty",
-        "cty/function",
-        "cty/function/stdlib",
-        "cty/convert",
-        "cty/set",
-        "cty/gocty",
-        "cty/json",
-    ],
-    licences = ["MIT"],
-    module = "github.com/zclconf/go-cty",
-    version = "v1.8.3",
-    deps = [
-        ":apparentlymart_textseg",
-        ":x_text",
-    ],
-)
-
-go_module(
-    name = "agext_levenshtein",
-    licences = ["Apache-2.0"],
-    module = "github.com/agext/levenshtein",
-    version = "v1.2.3",
-)
-
-go_module(
-    name = "apparentlymart_textseg",
-    install = ["textseg"],
-    licences = [
-        "Apache-2.0",
-        "MIT",
-        "Unicode-DFS-2016",
-    ],
-    module = "github.com/apparentlymart/go-textseg/v13",
-    version = "v13.0.0",
-)
-
-go_module(
-    name = "google_cmp",
-    install = [
-        "cmp",
-        "cmp/internal/diff",
-        "cmp/internal/flags",
-        "cmp/internal/function",
-        "cmp/internal/value",
-    ],
-    licences = ["BSD-3-Clause"],
-    module = "github.com/google/go-cmp",
-    version = "v0.5.5",
 )
 
 go_module(

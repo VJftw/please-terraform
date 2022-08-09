@@ -10,9 +10,6 @@ terraform_root(
         "//example/third_party/terraform/module:cloudposse_null_label_0_12",
         "//example/0.12/my_module:my_module",
     ],
-    providers = [
-        "//example/third_party/terraform/provider:null",
-    ],
-    toolchain = "//example/third_party/terraform:terraform_0_12",
+    toolchain = "//example/third_party/terraform:0.12",
     var_files = ["my_vars.tfvars"],
 )

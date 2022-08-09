@@ -1,12 +1,11 @@
 go_binary(
     name = "please_terraform",
     srcs = ["main.go"],
+    static = True,
     visibility = ["PUBLIC"],
     deps = [
         "//internal/cmd",
         "//pkg/module",
-        "//pkg/provider",
-        "//pkg/run",
-        "//pkg/workspace",
+        "//pkg/root",
     ],
 )

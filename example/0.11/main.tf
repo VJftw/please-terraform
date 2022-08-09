@@ -1,5 +1,5 @@
 provider "null" {
-  
+
 }
 
 resource "null_resource" "version" {
@@ -9,7 +9,7 @@ resource "null_resource" "version" {
 }
 
 module "label" {
-  source = "/home/vjftw/Projects/VJftw/please-terraform/plz-out/gen/example/third_party/terraform/module/cloudposse_null_label_0_11"
+  source = "//example/third_party/terraform/module:cloudposse_null_label_0_11"
   namespace  = "eg"
   stage      = "prod"
   name       = "bastion"
@@ -23,5 +23,5 @@ module "label" {
 }
 
 module "my_label" {
-  source = "/home/vjftw/Projects/VJftw/please-terraform/plz-out/gen/example/0.11/my_module/my_module"
+  source = "//example/0.11/my_module:my_module"
 }

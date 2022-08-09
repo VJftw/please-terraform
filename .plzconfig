@@ -1,26 +1,31 @@
 [Please]
-Version = >=16.10.0
-
-[Parse]
-PreloadBuildDefs = build/defs/terraform.build_defs
+Version = 16.21.3
 
 [Go]
 ImportPath = github.com/VJftw/please-terraform
 gotool = //third_party/go:toolchain|go
 
+; Define the Plugin configuration options.
 [PluginDefinition]
-name = terraform
+Name = terraform
+Description = "A Please plugin for working with Terraform"
+BuildDefsDir = "build/defs"
+
+[PluginConfig "tool"]
+ConfigKey = Tool
+Optional = false
 
 [PluginConfig "default_toolchain"]
 ConfigKey = DefaultToolchain
 DefaultValue = ""
+Optional = true
 
-[PluginConfig "tool"]
-ConfigKey = Tool
-DefaultValue = @self//cmd/please_terraform
+; Use the plugin in this repository for tests.
+[Plugin "terraform"]
+Tool = //cmd/please_terraform
 
 [alias "lint"]
-cmd = run sequential --include lint //scripts/lint/...
+cmd = run sequential --include lint //build/lint/...
 
 [alias "fmt-all"]
-cmd = run sequential --include fmt //scripts/fmt/...
+cmd = run sequential --include fmt //build/fmt/...

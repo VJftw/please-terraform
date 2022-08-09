@@ -1,16 +1,7 @@
 """Build rules for working with Hashicorp Terraform (https://terraform.io)
 """
 
-TERRAFORM_DEFAULT_TOOLCHAIN = CONFIG.TERRAFORM.DEFAULT_TOOLCHAIN or "//third_party/binary:terraform"
-TERRAFORM_PLZ_TOOL = CONFIG.TERRAFORM.TOOL or "//third_party/terraform:plz"
-
-def terraform_toolchain(
-    name:str,
-    version:str,
-    hashes:list = [],
-    labels: list = [],
-    visibility:list = [],
-):
+def terraform_toolchain(name:str, version:str, hashes:list = [], labels: list = [], visibility:list = []):
     """Build rule for obtaining a version of the Terraform CLI.
     Args:
         name: The name of the build rule.
@@ -36,97 +27,6 @@ def terraform_toolchain(
         binary = True,
     )
 
-def terraform_registry_provider(
-    name: str,
-    registry: str = "https://registry.terraform.io",
-    provider: str,
-    version: str,
-    licences: list = [],
-    labels: list = [],
-    visibility: list = [],
-    hashes: list = [],
-):
-    provider_namespace=provider.split("/")[0]
-    provider_type=provider.split("/")[1]
-
-    aliases = [provider, "//$PKG:$NAME"]
-    aliases_flags = [f"--aliases=\"{a}\"" for a in aliases]
-    aliases_cmd = " ".join(aliases_flags)
-
-    genrule(
-        name = name,
-        sandbox = False,
-        outs = [name],
-        tools = [TERRAFORM_PLZ_TOOL],
-        srcs = [],
-        exit_on_error = True,
-        hashes = hashes,
-        cmd = f"""
-$TOOLS -vvvvv provider registry \\
-    --registry="{registry}" \\
-    --namespace="{provider_namespace}" \\
-    --type="{provider_type}" \\
-    --version="{version}" \\
-    --os="{CONFIG.OS}" \\
-    --arch="{CONFIG.ARCH}" \\
-    --out="$OUTS" \\
-    --pkg="$PKG" \\
-    {aliases_cmd}
-""",
-        visibility = visibility,
-    )
-
-def terraform_registry_module(
-    name: str,
-    registry: str = "https://registry.terraform.io",
-    module: str,
-    version: str,
-    strip: list = [],
-    deps: list = [],
-    hashes: list = [],
-    licences: list = [],
-    labels: list = [],
-    visibility: list = [],
-):
-
-    deps=[canonicalise(dep) for dep in deps]
-
-    mod_namespace=module.split("/")[0]
-    mod_name=module.split("/")[1]
-    mod_provider=module.split("/")[2]
-
-    strip_flags = [f"--strip=\"{s}\"" for s in strip]
-    strip_cmd = " ".join(strip_flags)
-    aliases = [module, "//$PKG:$NAME"]
-    aliases_flags = [f"--aliases=\"{a}\"" for a in aliases]
-    aliases_cmd = " ".join(aliases_flags)
-
-    deps_flags = [f"--deps=\"$(location {d})\"" for d in deps]
-    deps_cmd = " ".join(deps_flags)
-
-    genrule(
-        name = name,
-        sandbox = False,
-        outs = [name],
-        tools = [TERRAFORM_PLZ_TOOL],
-        deps = deps,
-        exported_deps = deps,
-        exit_on_error = True,
-        hashes = hashes,
-        visibility = visibility,
-        cmd = f"""
-$TOOLS -vvvvv module registry \\
-    --registry="{registry}" \\
-    --namespace="{mod_namespace}" \\
-    --name="{mod_name}" \\
-    --provider="{mod_provider}" \\
-    --version="{version}" \\
-    --out="$OUTS" \\
-    --pkg="$PKG" \\
-    {strip_cmd} {deps_cmd} {aliases_cmd}
-""",
-    )
-
 def terraform_module(
     name: str,
     srcs: list = None,
@@ -146,23 +46,83 @@ def terraform_module(
     deps_flags = [f"--deps=\"$(location {d})\"" for d in deps]
     deps_cmd = " ".join(deps_flags)
 
-    genrule(
+    return genrule(
         name = name,
         srcs = srcs,
         outs = [name],
         exported_deps=deps,
         deps=deps,
         visibility=visibility,
-        tools=[TERRAFORM_PLZ_TOOL],
+        tools=[CONFIG.TERRAFORM.TOOL],
         cmd = f"""
+set -x
 $TOOLS -vvvvv module local \\
-    --aliases="//$PKG:$NAME" \\
+    {deps_cmd} \\
     --pkg="$PKG" \\
     --name="$NAME" \\
     --srcs="$SRCS" \\
+    --out="$OUTS"
+    """,
+    )
+
+def terraform_registry_module(
+    name: str,
+    registry: str = "https://registry.terraform.io",
+    module: str,
+    version: str,
+    strip: list = [],
+    deps: list = [],
+    hashes: list = [],
+    licences: list = [],
+    labels: list = [],
+    visibility: list = [],
+):
+    """Build rule for obtaining a remote Terraform Module or defining a local Terraform module.
+    Args:
+        name: The name of the build rule.
+        registry: The Terraform registry address that implements the Terraform module protocol.
+                  defaults to https://registry.terraform.io
+        module: The name of the module in the Terraform registry.
+        version: The version of module in the Terraform registry.
+        strip: A list of directories to strip from the Terraform module.
+        deps: The modules that this module depends on.
+        hashes: A list of hashes to compare the Terraform module to.
+        licences: A list of licences that the Terraform module has.
+        labels: The additonal labels to add to the build rule.
+        visibility: The targets to make the toolchain visible to.
+    """
+    mod_namespace=module.split("/")[0]
+    mod_name=module.split("/")[1]
+    mod_provider=module.split("/")[2]
+
+    deps=[canonicalise(dep) for dep in deps]
+    deps_flags = [f"--deps=\"$(location {d})\"" for d in deps]
+    deps_cmd = " ".join(deps_flags)
+
+    strip_flags = [f"--strip=\"{s}\"" for s in strip]
+    strip_cmd = " ".join(strip_flags)
+
+    return genrule(
+        name = name,
+        outs = [name],
+        exported_deps=deps,
+        deps=deps,
+        visibility=visibility,
+        tools=[CONFIG.TERRAFORM.TOOL],
+        cmd = f"""
+set -x
+$TOOLS -vvvvv module registry \\
+    --name="{name}" \\
+    {deps_cmd} \\
+    {strip_cmd} \\
     --out="$OUTS" \\
-    {deps_cmd}
-        """,
+    --registry="{registry}" \\
+    --namespace="{mod_namespace}" \\
+    --module_name="{mod_name}" \\
+    --provider="{mod_provider}" \\
+    --version="{version}" \\
+    --pkg="$PKG"
+    """,
     )
 
 def terraform_root(
@@ -170,12 +130,13 @@ def terraform_root(
     srcs: list,
     var_files: list = [],
     modules: list = [],
-    providers: list = [],
     toolchain: str = None,
-    pre_binaries: list = [],
-    post_binaries: list = [],
     labels: list = [],
     visibility: list = [],
+    add_default_workflows: bool = True,
+    additional_workspace_data: list = [],
+    pre_workspace_cmd: str = "",
+    post_workspace_cmd: str = "",
 ):
     """Build rule for running Terraform against Terraform configuration.
     Args:
@@ -183,139 +144,92 @@ def terraform_root(
         srcs: The source Terraform files for the root module.
         vars: The Terraform var files passed into the root module.
         modules: The Terraform modules that the srcs use.
-        providers: The Terraform providers that the srcs use.
         toolchain: The Terraform toolchain to use with against the srcs.
-        pre_binares: A list of binaries to run before performing Terraform commands. This can be used for preparing authentication.
-        post_binares: A list of binaries to run after performing Terraform commands. This can be used for cleaning up authentication, or alternate resource lifecycles.
         labels: The additonal labels to add to the build rule.
         visibility: The targets to make the toolchain visible to.
+        add_default_workflows: Whether or not to include the default Terraform workflows as Please targets (_plan, _apply, _destroy, _validate).
+        additional_workspace_data: Additional data to include at Terraform runtime.
+        pre_workspace_cmd: Additional commands to run to execute before executing Terraform commands.
+        post_workspace_cmd: Additional commands to run to execute after executing Terraform commands.
     """
-    # determine the terraform binary to use
-    toolchain = toolchain or TERRAFORM_DEFAULT_TOOLCHAIN
+    # build a Terraform root workspace
+    var_file_flags = [f"--var_files=\"$(location {var_file})\"" for var_file in var_files]
+    var_files_cmd = " ".join(var_file_flags)
 
-    # generate a root module to run terraform against
-    root = _terraform_root(name, srcs, var_files, modules, toolchain)
-
-    # plugins only consist of providers at the moment
-    plugins = providers
-
-    plugins_csv_array = _to_csv_array([f"$(out_location {p})" for p in plugins])
-    pre_binary_csv_array = _to_csv_array([f"$(out_exe {b})" for b in pre_binaries])
-    post_binary_csv_array = _to_csv_array([f"$(out_exe {b})" for b in post_binaries])
-
-    terraform_root_bin = sh_cmd(
-        name = f"{name}_bin",
-        shell = "/bin/bash",
-        cmd = f"""
-$(out_exe {TERRAFORM_PLZ_TOOL}) -vvvvv run \\\\
-    --terraform_binary="$(out_exe {toolchain})" \\\\
-    --pkg="$PKG" \\\\
-    --name="$NAME" \\\\
-    --os="$OS" \\\\
-    --arch="$ARCH" \\\\
-    --terraform_root="$(out_location {root})" \\\\
-    --plugins="{plugins_csv_array}" \\\\
-    --pre_binaries="{pre_binary_csv_array}" \\\\
-    --post_binaries="{post_binary_csv_array}" \\\\
-    --extra_args="\\\$*"
-        """,
-        data = [root, toolchain, TERRAFORM_PLZ_TOOL] + plugins + pre_binaries + post_binaries,
-        labels = [f"terraform_bin"] + labels,
-        visibility = visibility,
-    )
-
-    cmds = {
-        "plan": ["init", "plan"],
-        "apply": ["init", "apply"],
-        "destroy": ["init", "destroy"],
-    }
-    for k in cmds.keys():
-        commands = cmds[k]
-
-        sh_cmd(
-            name = f"{name}_{k}",
-            shell = "/bin/bash",
-            cmd = _terraform_cmds_to_bash(terraform_root_bin, commands),
-            data = [terraform_root_bin, root, toolchain, TERRAFORM_PLZ_TOOL] + plugins + pre_binaries + post_binaries,
-            labels = [f"terraform_{k}"] + labels,
-            visibility = visibility,
-        )
-
-    _linters(name, terraform_root_bin, toolchain, root, labels, visibility)
-
-    return terraform_root_bin
-
-def _to_csv_array(items:list):
-    return ",".join(items)
-
-def _to_csv_map(items:dict):
-    associative_list=[]
-    for k in items.keys():
-        v = items[k]
-        associative_list += [f'{k}={v}']
-
-    return _to_csv_array(associative_list)
-
-def _terraform_cmds_to_bash(terraform_root_bin: str, cmds: list):
-    cmds_to_run_for_key = [f"$(out_exe {terraform_root_bin}) {cmd}" for cmd in cmds]
-    cmds_to_run = "\n".join(cmds_to_run_for_key)
-    return f"{cmds_to_run} \\\$@",
-
-def _terraform_root(
-    name: str,
-    srcs: list,
-    var_files: list = [],
-    modules: list = [],
-    toolchain: str = None,
-):
-    srcs_csv = _to_csv_array([f"$(location {src})" for src in srcs])
-    var_files_csv = _to_csv_array([f"$(location {var_file})" for var_file in var_files])
-
-    modules_flags = [f"--modules=\"$(location {m})\"" for m in modules]
+    modules_flags = [f"--modules=\"$(location {module})\"" for module in modules]
     modules_cmd = " ".join(modules_flags)
 
-    return genrule(
+    root=genrule(
         name = f"_{name}_root",
-        outs = [f"_{name}_root"],
-        tools = [TERRAFORM_PLZ_TOOL],
+        outs = [f"{name}_root"],
+        tools = [CONFIG.TERRAFORM.TOOL],
         deps = modules,
-        exported_deps = modules,
-        needs_transitive_deps = True,
-        srcs = srcs + var_files,
+        srcs = {
+            "srcs": srcs,
+            "modules": modules,
+            "var_files": var_files,
+        },
         cmd = f"""
-$TOOLS workspace -vvvvv \\
+$TOOLS -vvvv root build \\
+    {var_files_cmd} \\
+    {modules_cmd} \\
     --pkg="$PKG" \\
-    --name="$NAME" \\
+    --name="{name}" \\
     --os="{CONFIG.OS}" \\
     --arch="{CONFIG.ARCH}" \\
     --out="$OUTS" \\
     --pkg_dir="$PKG_DIR" \\
-    --srcs="{srcs_csv}" \\
-    --var_files="{var_files_csv}" \\
-    {modules_cmd}
+    --srcs="$SRCS_SRCS"
         """,
     )
 
-def _linters(
-    name:str,
-    terraform_root_bin:str,
-    toolchain:str,
-    root:str,
-    labels:list,
-    visibility:list,
-):
-    linters = {
-        "validate": ["init -backend=false", "validate"],
-        "fmt": ["fmt -check -diff"],
-    }
-    for k in linters.keys():
-        commands = linters[k]
+    # determine the terraform binary to use
+    toolchain = toolchain or CONFIG.TERRAFORM.DEFAULT_TOOLCHAIN
 
-        sh_cmd(
-            name = f"{name}_{k}",
-            shell = "/bin/bash",
-            cmd = _terraform_cmds_to_bash(terraform_root_bin, commands),
-            data = [terraform_root_bin, root, toolchain, TERRAFORM_PLZ_TOOL],
-            labels = [f"terraform_{k}", "lint"] + labels,
-            visibility = visibility,
-        )
+    virtualenv = sh_cmd(
+        name = name,
+        shell = "/usr/bin/env bash",
+        cmd = f"""
+set -Eeuo pipefail
+# Source the workspace (virtual environment) for running Terraform commands.
+$(out_location {CONFIG.TERRAFORM.TOOL}) root virtualenv \\
+    --terraform_binary="$(out_exe {toolchain})" \\
+    --os="$OS" \\
+    --arch="$ARCH" \\
+    --root_module="$(out_location {root})" \\
+    | source /dev/stdin
+
+# Run pre commands
+{pre_workspace_cmd}
+
+# Run the provided commands in a subshell, if any.
+(eval "set -x; "\\\$*"")
+
+# Run post commands
+{post_workspace_cmd}
+        """,
+        data = [root, toolchain, CONFIG.TERRAFORM.TOOL] + modules + additional_workspace_data,
+        labels = [f"terraform_virtualenv"] + labels,
+        visibility = visibility,
+    )
+
+    if add_default_workflows:
+        default_workflows = {
+            "plan": "terraform init && terraform plan",
+            "apply": "terraform init && terraform apply",
+            "destroy": "terraform init && terraform destroy",
+            "validate": "terraform init -backend=false && terraform validate",
+        }
+
+        for workflow in default_workflows.keys():
+            cmd = default_workflows[workflow]
+
+            sh_cmd(
+                name = f"{name}_{workflow}",
+                shell = "/usr/bin/env bash",
+                data = [virtualenv],
+                cmd = f"$(out_exe {virtualenv}) \"{cmd} \\\$@\"",
+                labels = [f"terraform_{workflow}"],
+            )
+
+    return virtualenv

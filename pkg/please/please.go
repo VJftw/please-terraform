@@ -1,35 +1,36 @@
 package please
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
+	"regexp"
 
 	"github.com/VJftw/please-terraform/internal/logging"
 )
 
 var log = logging.NewLogger()
 
-func MustRepoRoot(plzPkg string) string {
-	repoRoot := filepath.Dir(MustAbsPlzOut(plzPkg))
-	log.Debug().
-		Str("path", repoRoot).
-		Msg("resolved repo root path")
-	return repoRoot
+// Opts represents the available options to this Please package as a whole.
+type Opts struct {
+	PlzOutDir string `long:"plz_out_dir" default:"plz-out/" description:"The plz-out directory relative to the repo root."`
 }
 
-func MustAbsPlzOut(plzPkg string) string {
+// MustRepoRoot returns the path to the root of the repository.
+func MustRepoRoot(plzOutDir string) string {
 	cwd, err := os.Getwd()
 	if err != nil {
 		log.Fatal().
 			Err(err).
-			Msg("could not get working directory")
+			Msg("could not get current working directory")
 	}
 
-	absPlzOutPath := filepath.Dir(filepath.Dir(strings.TrimSuffix(filepath.Dir(cwd), plzPkg)))
-	log.Debug().
-		Str("path", absPlzOutPath).
-		Msg("resolved plz-out path")
+	var plzOutRegex = regexp.MustCompile(fmt.Sprintf(`%c%s.*`, filepath.Separator, plzOutDir))
 
-	return absPlzOutPath
+	repoRoot := plzOutRegex.ReplaceAllString(cwd, "")
+
+	log.Debug().
+		Str("path", repoRoot).
+		Msg("resolved repo root path")
+	return repoRoot
 }

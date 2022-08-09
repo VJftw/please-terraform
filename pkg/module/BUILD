@@ -1,6 +1,7 @@
 go_library(
     name = "module",
     srcs = [
+        "command.go",
         "local.go",
         "module.go",
         "registry.go",
@@ -18,10 +19,7 @@ go_library(
 
 go_test(
     name = "module_test",
-    srcs = ["module_test.go"],
-    data = [
-        # "testdata/main.tf",
-    ],
+    srcs = ["local_test.go"],
     external = True,
     deps = [
         ":module",

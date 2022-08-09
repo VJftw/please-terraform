@@ -3,9 +3,22 @@ go_library(
     srcs = [
         "please.go",
         "replace.go",
+        "sync.go",
     ],
     visibility = ["//pkg/..."],
     deps = [
         "//internal/logging",
+    ],
+)
+
+go_test(
+    name = "please_test",
+    srcs = [
+        "sync_test.go",
+    ],
+    external = True,
+    deps = [
+        ":please",
+        "//third_party/go:stretchr_testify",
     ],
 )

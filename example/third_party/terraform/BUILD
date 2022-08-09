@@ -1,36 +1,22 @@
 subinclude("//build/defs:terraform")
 
-terraform_toolchain(
-    name = "terraform_0_11",
-    hashes = ["9b9a4492738c69077b079e595f5b2a9ef1bc4e8fb5596610f69a6f322a8af8dd"],
-    version = "0.11.14",
-    visibility = ["//example/0.11/..."],
-)
+for version, hashes in {
+    "0.11.15": ["e6c8c884de6c353cf98252c5e11faf972d4b30b5d070ab5ff70eaf92660a5aac"],
+    "0.12.31": ["e5eeba803bc7d8d0cae7ef04ba7c3541c0abd8f9e934a5e3297bf738b31c5c6d"],
+    "0.13.7": ["4a52886e019b4fdad2439da5ff43388bbcc6cce9784fde32c53dcd0e28ca9957"],
+    "0.14.11": ["171ef5a4691b6f86eab524feaf9a52d5221c875478bd63dd7e55fef3939f7fd4"],
+    "0.15.5": ["3b144499e08c245a8039027eb2b84c0495e119f57d79e8fb605864bb48897a7d"],
+    "1.0.11": ["eeb46091a42dc303c3a3c300640c7774ab25cbee5083dafa5fd83b54c8aca664"],
+    "1.1.9": ["9d2d8a89f5cc8bc1c06cb6f34ce76ec4b99184b07eb776f8b39183b513d7798a"],
+    "1.2.6": ["9fd445e7a191317dcfc99d012ab632f2cc01f12af14a44dfbaba82e0f9680365"],
+}.items():
+    version_parts = version.split(".")
+    major_version = version_parts[0]
+    minor_version = version_parts[1]
 
-terraform_toolchain(
-    name = "terraform_0_12",
-    hashes = ["a646b61232ac0c400ec8cc2c062f4e36b5a9e8515f11f7f5f61eb03fe058f18d"],
-    version = "0.12.30",
-    visibility = ["//example/0.12/..."],
-)
-
-terraform_toolchain(
-    name = "terraform_0_13",
-    hashes = ["55f2db00b05675026be9c898bdd3e8230ff0c5c78dd12d743ca38032092abfc9"],
-    version = "0.13.6",
-    visibility = ["//example/0.13/..."],
-)
-
-terraform_toolchain(
-    name = "terraform_0_14",
-    hashes = ["63a5a45edde435fa3f278c86ce96346ee7f6b204ea949734f26f963b7dbc1074"],
-    version = "0.14.6",
-    visibility = ["//example/0.14/..."],
-)
-
-terraform_toolchain(
-    name = "terraform_1_0",
-    hashes = ["8be33cc3be8089019d95eb8f546f35d41926e7c1e5deff15792e969dde573eb5"],
-    version = "1.0.0",
-    visibility = ["//example/1.0/..."],
-)
+    terraform_toolchain(
+        name = f"{major_version}.{minor_version}",
+        hashes = hashes,
+        version = version,
+        visibility = [f"//example/{major_version}.{minor_version}/..."],
+    )

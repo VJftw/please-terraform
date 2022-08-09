@@ -7,12 +7,13 @@ import (
 	"strings"
 )
 
+// ReplaceInDirectory recursively replaces strings in files within a directory.
 func ReplaceInDirectory(dir string, search string, replace string) error {
 	err := filepath.Walk(dir, func(path string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		if fi.IsDir() {
+		if !fi.Mode().IsRegular() {
 			return nil
 		}
 
