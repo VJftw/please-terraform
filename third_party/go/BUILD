@@ -99,7 +99,7 @@ go_module(
     ],
     licences = ["MPL-2.0"],
     module = "github.com/hashicorp/go-getter",
-    version = "v1.5.3",
+    version = "v1.6.1",
     deps = [
         ":aws_aws_sdk_go",
         ":bgentry_netrc",

@@ -3,7 +3,7 @@ module github.com/VJftw/please-terraform
 go 1.17
 
 require (
-	github.com/hashicorp/go-getter v1.5.5
+	github.com/hashicorp/go-getter v1.6.1
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/rs/zerolog v1.23.0
 )
@@ -33,7 +33,7 @@ require (
 	go.opencensus.io v0.22.0 // indirect
 	golang.org/x/net v0.0.0-20201021035429-f5854403a974 // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45 // indirect
-	golang.org/x/sys v0.0.0-20210320140829-1e4c9ba3b0c4 // indirect
+	golang.org/x/sys v0.0.0-20220517195934-5e4e11fc645e // indirect
 	golang.org/x/text v0.3.3 // indirect
 	google.golang.org/api v0.9.0 // indirect
 	google.golang.org/appengine v1.6.1 // indirect
