@@ -8,7 +8,7 @@ on:
         required: true
 
 jobs:
-  build:
+  create-release:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -16,6 +16,8 @@ jobs:
 
       - name: Tag
         run: |-
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
           git tag \
             -a ${{ github.event.inputs.version }} \
             -m ${{ github.event.inputs.version }}
