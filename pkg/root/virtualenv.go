@@ -42,8 +42,8 @@ func (c *CommandVirtualEnv) Execute(args []string) error {
 	}
 
 	// Add the `terraform` binary to the sourcing user's path.
-	fmt.Printf(`export PATH="%s:$PATH"`+"\n", filepath.Dir(c.TerraformBinary))
-	// fmt.Println(`export PATH`)
+	fmt.Printf(`PATH="%s:$PATH"`+"\n", filepath.Dir(c.TerraformBinary))
+	fmt.Println(`export PATH`)
 
 	// We cannot run Terraform commands in the `plz-out/gen/<rule>` directory
 	// as Terraform creates symlinks which Please warns us will be removed.

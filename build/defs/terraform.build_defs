@@ -199,12 +199,12 @@ $TOOLS -vvvv root build \\
         cmd = f"""
 set -Eeuo pipefail
 # Source the workspace (virtual environment) for running Terraform commands.
-$(out_location {CONFIG.TERRAFORM.TOOL}) root virtualenv \\
+source <($(out_location {CONFIG.TERRAFORM.TOOL}) root virtualenv \\
     --terraform_binary="$(out_exe {toolchain})" \\
     --os="$OS" \\
     --arch="$ARCH" \\
     --root_module="$(out_location {root})" \\
-    | source /dev/stdin
+    )
 
 # Run pre commands
 {pre_workspace_cmd}
