@@ -25,6 +25,7 @@ Help = "Sets the given Please target as the Tool which the Terraform build_defs 
 [PluginConfig "tool_version"]
 ConfigKey = ToolVersion
 Optional = true
+Inherit = true
 Help = "In conjunction with the default value for Tool, this sets the version of the Tool which should be downloaded from GitHub Releases."
 
 ; Use the plugin in this repository for tests.

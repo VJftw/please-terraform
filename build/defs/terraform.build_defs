@@ -242,8 +242,12 @@ $(out_location {CONFIG.TERRAFORM.TOOL}) root virtualenv \\
     return virtualenv
 
 def _validate_config():
-    if CONFIG.TERRAFORM.TOOL != "//third_party/binary:please_terraform" and CONFIG.TERRAFORM.TOOL_VERSION:
-        fail("terraform.ToolVersion should only be set when terraform.Tool is the default value (currently: '{CONFIG.TERRAFORM.TOOL}').")
+    default_terraform_tools = [
+        "///terraform//third_party/binary:please_terraform",
+        "//third_party/binary:please_terraform",
+    ]
+    if CONFIG.TERRAFORM.TOOL not in default_terraform_tools and CONFIG.TERRAFORM.TOOL_VERSION:
+        fail(f"terraform.ToolVersion should only be set when terraform.Tool is the default value (currently: '{CONFIG.TERRAFORM.TOOL}').")
 
 def _terraform_tool():
     _validate_config()
