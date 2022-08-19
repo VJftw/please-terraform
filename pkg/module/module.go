@@ -79,7 +79,7 @@ func ColocateModules(metadataFilePath string, out string, modulePaths []string) 
 	}
 
 	for _, modulePath := range modulePaths {
-		replace := filepath.Join(".modules", modulePath)
+		replace := fmt.Sprintf(".%c%s", filepath.Separator, filepath.Join(".modules", modulePath))
 
 		moduleMeta, err := Load(filepath.Join(modulePath, metadataFilePath))
 		if err != nil {

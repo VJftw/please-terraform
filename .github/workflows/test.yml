@@ -11,3 +11,9 @@ jobs:
 
       - name: Test
         run: ./pleasew test -p -v2 //...
+
+      - name: Run Terraform Plan
+        run: ./pleasew query alltargets --include terraform_plan //example/... | ./pleasew run sequential -
+
+      - name: Run Terraform Apply
+        run: ./pleasew query alltargets --include terraform_apply //example/... | ./pleasew run sequential -a=--auto-approve -
