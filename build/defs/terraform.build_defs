@@ -31,6 +31,7 @@ def terraform_toolchain(name:str, version:str, hashes:list = [], labels: list = 
 def terraform_module(
     name: str,
     srcs: list = None,
+    aliases: list = [],
     deps: list = [],
     labels: list = [],
     visibility: list = [],
@@ -39,6 +40,7 @@ def terraform_module(
     Args:
         name: The name of the build rule.
         srcs: The source Terraform files for the Terraform module.
+        aliases: Additional aliases to replace with the module.
         deps: The modules that this module depends on.
         labels: The additonal labels to add to the build rule.
         visibility: The targets to make the toolchain visible to.
@@ -47,6 +49,9 @@ def terraform_module(
     deps=[canonicalise(dep) for dep in deps]
     deps_flags = [f"--deps=\"$(location {d})\"" for d in deps]
     deps_cmd = " ".join(deps_flags)
+
+    aliases_flags = [f"--aliases=\"{a}\"" for a in aliases]
+    aliases_cmd = " ".join(aliases_flags)
 
     return genrule(
         name = name,
@@ -60,6 +65,7 @@ def terraform_module(
 set -x
 $TOOLS -vvvvv module local \\
     {deps_cmd} \\
+    {aliases_cmd} \\
     --pkg="$PKG" \\
     --name="$NAME" \\
     --srcs="$SRCS" \\
@@ -72,6 +78,7 @@ def terraform_registry_module(
     registry: str = "https://registry.terraform.io",
     module: str,
     version: str,
+    aliases: list = [],
     strip: list = [],
     deps: list = [],
     hashes: list = [],
@@ -86,6 +93,7 @@ def terraform_registry_module(
                   defaults to https://registry.terraform.io
         module: The name of the module in the Terraform registry.
         version: The version of module in the Terraform registry.
+        aliases: Additional aliases to replace with the module.
         strip: A list of directories to strip from the Terraform module.
         deps: The modules that this module depends on.
         hashes: A list of hashes to compare the Terraform module to.
@@ -105,6 +113,9 @@ def terraform_registry_module(
     strip_flags = [f"--strip=\"{s}\"" for s in strip]
     strip_cmd = " ".join(strip_flags)
 
+    aliases_flags = [f"--aliases=\"{a}\"" for a in aliases]
+    aliases_cmd = " ".join(aliases_flags)
+
     return genrule(
         name = name,
         outs = [name],
@@ -116,6 +127,7 @@ def terraform_registry_module(
 set -x
 $TOOLS -vvvvv module registry \\
     --name="{name}" \\
+    {aliases_cmd} \\
     {deps_cmd} \\
     {strip_cmd} \\
     --out="$OUTS" \\

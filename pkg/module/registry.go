@@ -52,6 +52,8 @@ func (c *CommandRegistry) Execute(args []string) error {
 	m.Aliases = append(m.Aliases, []string{
 		// Supports referencing by Please target.
 		fmt.Sprintf("//%s:%s", c.Pkg, c.Name),
+		// Supports referencing by Terraform Module Registry.
+		fmt.Sprintf("%s/%s/%s", c.Namespace, c.ModuleName, c.Provider),
 	}...)
 
 	if filepath.Base(c.Pkg) == c.Name {
