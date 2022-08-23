@@ -1,5 +1,5 @@
 [Please]
-Version = 16.21.3
+Version = 16.22.0
 
 [Go]
 ImportPath = github.com/VJftw/please-terraform
@@ -28,9 +28,15 @@ Optional = true
 Inherit = true
 Help = "In conjunction with the default value for Tool, this sets the version of the Tool which should be downloaded from GitHub Releases."
 
+[PluginConfig "extra_terraform_root_src"]
+ConfigKey = ExtraTerraformRootSrc
+Optional = true
+Help = "A Please targets to add to every Terraform Root. This can be a filegroup for multiple files."
+
 ; Use the plugin in this repository for tests.
 [Plugin "terraform"]
 Tool = //cmd/please_terraform
+ExtraTerraformRootSrc = //example/common:state-backend
 
 [alias "lint"]
 cmd = run sequential --include lint //build/lint/...

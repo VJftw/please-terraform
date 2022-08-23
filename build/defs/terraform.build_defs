@@ -175,6 +175,9 @@ def terraform_root(
     modules_flags = [f"--modules=\"$(location {module})\"" for module in modules]
     modules_cmd = " ".join(modules_flags)
 
+    if CONFIG.TERRAFORM.EXTRA_TERRAFORM_ROOT_SRC:
+        srcs += [CONFIG.TERRAFORM.EXTRA_TERRAFORM_ROOT_SRC]
+
     root=genrule(
         name = f"_{name}_root",
         outs = [f"{name}_root"],
