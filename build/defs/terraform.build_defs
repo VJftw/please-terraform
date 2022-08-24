@@ -57,10 +57,11 @@ def terraform_module(
         name = name,
         srcs = srcs,
         outs = [name],
-        exported_deps=deps,
-        deps=deps,
-        visibility=visibility,
-        tools=[CONFIG.TERRAFORM.TOOL],
+        exported_deps = deps,
+        deps = deps,
+        visibility = visibility,
+        tools = [CONFIG.TERRAFORM.TOOL],
+        labels = ["terraform_configuration"] + labels,
         cmd = f"""
 set -x
 $TOOLS -vvvvv module local \\
@@ -231,7 +232,7 @@ source <($(out_location {CONFIG.TERRAFORM.TOOL}) root virtualenv \\
 {post_workspace_cmd}
         """,
         data = [root, toolchain, CONFIG.TERRAFORM.TOOL] + modules + additional_workspace_data,
-        labels = [f"terraform_virtualenv"] + labels,
+        labels = [f"terraform_root", "terraform_configuration"] + labels,
         visibility = visibility,
     )
 
