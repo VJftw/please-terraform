@@ -4,6 +4,7 @@ terraform_root(
     name = "example",
     srcs = [
         "main.tf",
+        "outputs.tf",
         "variables.tf",
     ],
     modules = [
@@ -12,4 +13,15 @@ terraform_root(
     ],
     toolchain = "//example/third_party/terraform:0.12",
     var_files = ["my_vars.tfvars"],
+    vars = {
+        "single_value": "e",
+        "list_value": [
+            "e_1",
+            "e_2",
+        ],
+        "dict_value": {
+            "e_1": "e_1",
+            "e_2": "e_2",
+        },
+    },
 )

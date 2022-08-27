@@ -144,6 +144,7 @@ $TOOLS -vvvvv module registry \\
 def terraform_root(
     name: str,
     srcs: list,
+    vars: dict = {},
     var_files: list = [],
     modules: list = [],
     toolchain: str = None,
@@ -158,7 +159,8 @@ def terraform_root(
     Args:
         name: The name of the build rule.
         srcs: The source Terraform files for the root module.
-        vars: The Terraform var files passed into the root module.
+        vars: The literal Terraform vars to pass into the root module.
+        var_files: The Terraform var files passed into the root module.
         modules: The Terraform modules that the srcs use.
         toolchain: The Terraform toolchain to use with against the srcs.
         labels: The additonal labels to add to the build rule.
@@ -169,7 +171,16 @@ def terraform_root(
         post_workspace_cmd: Additional commands to run to execute after executing Terraform commands.
     """
     _validate_config()
-    # build a Terraform root workspace
+
+    if vars:
+        json_vars = json(vars)
+        vars_file=genrule(
+            name = f"{name}_vars",
+            outs = [f"{name}_vars.tfvars.json"],
+            cmd = f"echo '{json_vars}' > $OUTS",
+        )
+        var_files += [vars_file]
+
     var_file_flags = [f"--var_files=\"$(location {var_file})\"" for var_file in var_files]
     var_files_cmd = " ".join(var_file_flags)
 
@@ -179,6 +190,7 @@ def terraform_root(
     if CONFIG.TERRAFORM.EXTRA_TERRAFORM_ROOT_SRC:
         srcs += [CONFIG.TERRAFORM.EXTRA_TERRAFORM_ROOT_SRC]
 
+    # build a Terraform root workspace
     root=genrule(
         name = f"_{name}_root",
         outs = [f"{name}_root"],
