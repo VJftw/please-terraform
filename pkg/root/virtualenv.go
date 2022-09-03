@@ -77,9 +77,9 @@ func (c *CommandVirtualEnv) Execute(args []string) error {
 		return fmt.Errorf("could not create symlink from '%s' to '%s': %w", old, new, err)
 	}
 
-	// set GIT_DIR
-	fmt.Printf(`GIT_DIR=%s/.git`+"\n", repoRoot)
-	fmt.Println(`export GIT_DIR`)
+	// set REPO_ROOT
+	fmt.Printf(`REPO_ROOT=%s`+"\n", repoRoot)
+	fmt.Println(`export REPO_ROOT`)
 
 	// change user's working directory.
 	log.Info().Str("path", virtualEnvDir).Msg("working directory")
