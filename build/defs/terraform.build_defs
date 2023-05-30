@@ -1,5 +1,6 @@
 """Build rules for working with Hashicorp Terraform (https://terraform.io)
 """
+subinclude("///shell//build_defs:shell")
 
 def terraform_toolchain(name:str, version:str, hashes:list = [], labels: list = [], visibility:list = []):
     """Build rule for obtaining a version of the Terraform CLI.

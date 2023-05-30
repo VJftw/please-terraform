@@ -1,3 +1,5 @@
+subinclude("///go//build_defs:go")
+
 go_library(
     name = "module",
     srcs = [
@@ -11,9 +13,9 @@ go_library(
         "//pkg/...",
     ],
     deps = [
+        "///third_party/go/github.com_hashicorp_go-getter//:go-getter",
         "//internal/logging",
         "//pkg/please",
-        "//third_party/go:hashicorp_getter",
     ],
 )
 
@@ -23,6 +25,7 @@ go_test(
     external = True,
     deps = [
         ":module",
-        "//third_party/go:stretchr_testify",
+        "///third_party/go/github.com_stretchr_testify//assert",
+        "///third_party/go/github.com_stretchr_testify//require",
     ],
 )

@@ -1,6 +1,6 @@
 module github.com/VJftw/please-terraform
 
-go 1.17
+go 1.20
 
 require (
 	github.com/hashicorp/go-getter v1.6.1

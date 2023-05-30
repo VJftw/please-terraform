@@ -1,5 +1,14 @@
-[Please]
-Version = 16.22.0
+; Please config file
+; Leaving this file as is is enough to use plz to build your project.
+; Please will stay on whatever version you currently have until you run
+; 'plz update', when it will download the latest available version.
+;
+; Or you can uncomment the following to pin everyone to a particular version;
+; when you change it all users will automatically get updated.
+[please]
+version = 17.0.0
+; Support the non *-rules repo name format of Please plugins.
+PluginRepo = "https://github.com/{owner}/{plugin}/archive/{revision}.zip"
 
 [Go]
 ImportPath = github.com/VJftw/please-terraform
@@ -38,8 +47,12 @@ Help = "A Please targets to add to every Terraform Root. This can be a filegroup
 Tool = //cmd/please_terraform
 ExtraTerraformRootSrc = //example/common:state-backend
 
-[alias "lint"]
-cmd = run sequential --include lint //build/lint/...
+; Go Plugin is used to build helpers.
+[Plugin "go"]
+Target = //third_party/plugins:go
+ImportPath = github.com/VJftw/please-terraform
+gotool = //third_party/go:toolchain|go
 
-[alias "fmt-all"]
-cmd = run sequential --include fmt //build/fmt/...
+; Shell Plugin is used for scripts.
+[Plugin "shell"]
+Target = //third_party/plugins:shell

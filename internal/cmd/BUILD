@@ -1,3 +1,5 @@
+subinclude("///go//build_defs:go")
+
 go_library(
     name = "cmd",
     srcs = [
@@ -9,8 +11,8 @@ go_library(
         "//cmd/...",
     ],
     deps = [
+        "///third_party/go/github.com_jessevdk_go-flags//:go-flags",
+        "///third_party/go/github.com_rs_zerolog//:zerolog",
         "//internal/logging",
-        "//third_party/go:jessevdk_flags",
-        "//third_party/go:rs_zerolog",
     ],
 )

@@ -1,3 +1,5 @@
+subinclude("///shell//build_defs:shell")
+
 sh_cmd(
     name = "util",
     srcs = ["util.sh"],
