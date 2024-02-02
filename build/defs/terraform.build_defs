@@ -2,7 +2,7 @@
 """
 subinclude("///shell//build_defs:shell")
 
-def terraform_toolchain(name:str, version:str, hashes:list = [], labels: list = [], visibility:list = []):
+def terraform_toolchain(name:str, version:str, hashes:list=[], labels:list=[], visibility:list=[]):
     """Build rule for obtaining a version of the Terraform CLI.
     Args:
         name: The name of the build rule.
@@ -12,7 +12,7 @@ def terraform_toolchain(name:str, version:str, hashes:list = [], labels: list = 
         visibility: The targets to make the toolchain visible to.
     """
     _validate_config()
-    download=remote_file(
+    download = remote_file(
         name = f"_{name}_download",
         out = f"_{name}_download",
         url = f"https://releases.hashicorp.com/terraform/{version}/terraform_{version}_{CONFIG.OS}_{CONFIG.ARCH}.zip",
@@ -20,23 +20,22 @@ def terraform_toolchain(name:str, version:str, hashes:list = [], labels: list = 
         extract = True,
     )
     return genrule(
-        name=name,
-        srcs=[download],
+        name = name,
+        srcs = [download],
         # We output into a directory so we can add `terraform` to the PATH at runtime.
-        outs=[f"_{name}_download/terraform"],
-        cmd="mkdir -p $(dirname $OUTS) && mv $SRCS/terraform $OUTS",
+        outs = [f"_{name}_download/terraform"],
+        cmd = "mkdir -p $(dirname $OUTS) && mv $SRCS/terraform $OUTS",
         visibility = visibility,
         binary = True,
     )
 
 def terraform_module(
-    name: str,
-    srcs: list = None,
-    aliases: list = [],
-    deps: list = [],
-    labels: list = [],
-    visibility: list = [],
-):
+        name:str,
+        srcs:list=None,
+        aliases:list=[],
+        deps:list=[],
+        labels:list=[],
+        visibility:list=[]):
     """Build rule for obtaining a remote Terraform Module or defining a local Terraform module.
     Args:
         name: The name of the build rule.
@@ -47,7 +46,7 @@ def terraform_module(
         visibility: The targets to make the toolchain visible to.
     """
     _validate_config()
-    deps=[canonicalise(dep) for dep in deps]
+    deps = [canonicalise(dep) for dep in deps]
     deps_flags = [f"--deps=\"$(location {d})\"" for d in deps]
     deps_cmd = " ".join(deps_flags)
 
@@ -76,18 +75,17 @@ $TOOLS -vvvvv module local \\
     )
 
 def terraform_registry_module(
-    name: str,
-    registry: str = "https://registry.terraform.io",
-    module: str,
-    version: str,
-    aliases: list = [],
-    strip: list = [],
-    deps: list = [],
-    hashes: list = [],
-    licences: list = [],
-    labels: list = [],
-    visibility: list = [],
-):
+        name:str,
+        registry:str="https://registry.terraform.io",
+        module:str,
+        version:str,
+        aliases:list=[],
+        strip:list=[],
+        deps:list=[],
+        hashes:list=[],
+        licences:list=[],
+        labels:list=[],
+        visibility:list=[]):
     """Build rule for obtaining a remote Terraform Module or defining a local Terraform module.
     Args:
         name: The name of the build rule.
@@ -104,11 +102,11 @@ def terraform_registry_module(
         visibility: The targets to make the toolchain visible to.
     """
     _validate_config()
-    mod_namespace=module.split("/")[0]
-    mod_name=module.split("/")[1]
-    mod_provider=module.split("/")[2]
+    mod_namespace = module.split("/")[0]
+    mod_name = module.split("/")[1]
+    mod_provider = module.split("/")[2]
 
-    deps=[canonicalise(dep) for dep in deps]
+    deps = [canonicalise(dep) for dep in deps]
     deps_flags = [f"--deps=\"$(location {d})\"" for d in deps]
     deps_cmd = " ".join(deps_flags)
 
@@ -121,10 +119,10 @@ def terraform_registry_module(
     return genrule(
         name = name,
         outs = [name],
-        exported_deps=deps,
-        deps=deps,
-        visibility=visibility,
-        tools=[CONFIG.TERRAFORM.TOOL],
+        exported_deps = deps,
+        deps = deps,
+        visibility = visibility,
+        tools = [CONFIG.TERRAFORM.TOOL],
         cmd = f"""
 set -x
 $TOOLS -vvvvv module registry \\
@@ -143,19 +141,18 @@ $TOOLS -vvvvv module registry \\
     )
 
 def terraform_root(
-    name: str,
-    srcs: list,
-    vars: dict = {},
-    var_files: list = [],
-    modules: list = [],
-    toolchain: str = None,
-    labels: list = [],
-    visibility: list = [],
-    add_default_workflows: bool = True,
-    additional_workspace_data: list = [],
-    pre_workspace_cmd: str = "",
-    post_workspace_cmd: str = "",
-):
+        name:str,
+        srcs:list,
+        vars:dict={},
+        var_files:list=[],
+        modules:list=[],
+        toolchain:str=None,
+        labels:list=[],
+        visibility:list=[],
+        add_default_workflows:bool=True,
+        additional_workspace_data:list=[],
+        pre_workspace_cmd:str="",
+        post_workspace_cmd:str=""):
     """Build rule for running Terraform against Terraform configuration.
     Args:
         name: The name of the build rule.
@@ -175,7 +172,7 @@ def terraform_root(
 
     if vars:
         json_vars = json(vars)
-        vars_file=genrule(
+        vars_file = genrule(
             name = f"{name}_vars",
             outs = [f"{name}_vars.tfvars.json"],
             cmd = f"echo '{json_vars}' > $OUTS",
@@ -192,7 +189,7 @@ def terraform_root(
         srcs += [CONFIG.TERRAFORM.EXTRA_TERRAFORM_ROOT_SRC]
 
     # build a Terraform root workspace
-    root=genrule(
+    root = genrule(
         name = f"_{name}_root",
         outs = [f"{name}_root"],
         tools = [CONFIG.TERRAFORM.TOOL],
@@ -283,7 +280,7 @@ def _terraform_tool():
     if CONFIG.TERRAFORM.TOOL_VERSION:
         remote_file(
             name = "please_terraform",
-            url = f"https://github.com/VJftw/please-terraform/releases/download/{CONFIG.TERRAFORM.TOOL_VERSION}/please_terraform",
+            url = f"https://github.com/VJftw/please-terraform/releases/download/{CONFIG.TERRAFORM.TOOL_VERSION}/please_terraform_{CONFIG.OS}_{CONFIG.ARCH}",
             visibility = ["PUBLIC"],
             binary = True,
         )
