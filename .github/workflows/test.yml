@@ -17,3 +17,9 @@ jobs:
 
       - name: Run Terraform Apply
         run: ./pleasew query alltargets --include terraform_apply //example/... | ./pleasew run sequential -a=--auto-approve -
+
+      - name: Build
+        run: |-
+          ./pleasew build -p -v=2 \
+            --profile release \
+            //dist:release_files

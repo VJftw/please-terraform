@@ -1,0 +1,5 @@
+[Plugin "go"]
+GoTool = //dist:release_toolchain|go
+
+[buildconfig]
+release = true

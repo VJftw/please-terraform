@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release Version'
+        description: "Release Version"
         required: true
 
 jobs:
@@ -26,11 +26,17 @@ jobs:
       - name: Build
         run: |-
           ./pleasew build -p -v=2 \
-            --arch linux_amd64 \
-            //cmd/please_terraform:please_terraform
+            --profile release \
+            //dist:release_files
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: plz-out/bin/cmd/please_terraform/please_terraform
+          files: |
+            plz-out/gen/dist/please_terraform_darwin_amd64
+            plz-out/gen/dist/please_terraform_darwin_arm64
+            plz-out/gen/dist/please_terraform_freebsd_amd64
+            plz-out/gen/dist/please_terraform_linux_amd64
+            plz-out/gen/dist/please_terraform_linux_arm64
+            plz-out/gen/dist/please_terraform_windows_amd64.exe
           tag_name: ${{ github.event.inputs.version }}

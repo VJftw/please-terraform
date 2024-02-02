@@ -4,7 +4,7 @@ subinclude("///shell//build_defs:shell")
 
 go_toolchain(
     name = "toolchain",
-    version = "1.20.4",
+    version = "1.21.6",
 )
 
 sh_cmd(
