@@ -120,6 +120,16 @@ func CopyFile(src string, dest string) error {
 		return err
 	}
 
+	if _, err := os.Stat(dest); err == nil {
+		// file exists, ensure removal is possible then remove.
+		if err := os.Chmod(dest, 0664); err != nil {
+			return fmt.Errorf("could not delete file, could not make file writeable: %w", err)
+		}
+		if err := os.Remove(dest); err != nil {
+			return fmt.Errorf("could not delete file: %w", err)
+		}
+	}
+
 	destination, err := os.Create(dest)
 	if err != nil {
 		return fmt.Errorf("could not create '%s': %w", dest, err)
