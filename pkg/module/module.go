@@ -14,7 +14,6 @@ var log = logging.NewLogger()
 
 // Metadata represents a module's metadata.
 type Metadata struct {
-	Target  string
 	Aliases []string
 }
 

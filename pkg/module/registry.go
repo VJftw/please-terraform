@@ -31,7 +31,7 @@ type CommandRegistry struct {
 // Execute builds a Terraform Registry Module as a Terraform Module.
 func (c *CommandRegistry) Execute(args []string) error {
 	m := &Metadata{
-		Target:  fmt.Sprintf("//%s:%s", c.Pkg, c.Name),
+		// Target:  fmt.Sprintf("//%s:%s", c.Pkg, c.Name),
 		Aliases: c.Aliases,
 	}
 

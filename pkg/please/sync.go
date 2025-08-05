@@ -103,7 +103,7 @@ func CopyFile(src string, dest string) error {
 	log.Debug().Str("src", src).Str("dest", dest).Msg("copying")
 	sourceFileStat, err := os.Stat(src)
 	if err != nil {
-		return err
+		return fmt.Errorf("stat src '%s': %w", src, err)
 	}
 
 	if !sourceFileStat.Mode().IsRegular() {

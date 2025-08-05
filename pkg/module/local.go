@@ -52,7 +52,7 @@ func (c *CommandLocal) Execute(args []string) error {
 	}
 
 	m := &Metadata{
-		Target:  fmt.Sprintf("//%s:%s", c.Pkg, c.Name),
+		// Target:  fmt.Sprintf("//%s:%s", c.Pkg, c.Name),
 		Aliases: c.Aliases,
 	}
 

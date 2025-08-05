@@ -1,6 +1,5 @@
 """Build rules for working with Hashicorp Terraform (https://terraform.io)
 """
-subinclude("///shell//build_defs:shell")
 
 def terraform_toolchain(name:str, version:str, hashes:list=[], labels:list=[], visibility:list=[]):
     """Build rule for obtaining a version of the Terraform CLI.
@@ -19,6 +18,7 @@ def terraform_toolchain(name:str, version:str, hashes:list=[], labels:list=[], v
         hashes = hashes,
         extract = True,
     )
+
     return genrule(
         name = name,
         srcs = [download],
@@ -26,6 +26,7 @@ def terraform_toolchain(name:str, version:str, hashes:list=[], labels:list=[], v
         outs = [f"_{name}_download/terraform"],
         cmd = "mkdir -p $(dirname $OUTS) && mv $SRCS/terraform $OUTS",
         visibility = visibility,
+        labels = ["terraform_toolchain"] + labels,
         binary = True,
     )
 
@@ -33,10 +34,13 @@ def terraform_module(
         name:str,
         srcs:list=None,
         aliases:list=[],
+        strip:list=[],
         deps:list=[],
         labels:list=[],
         visibility:list=[]):
-    """Build rule for obtaining a remote Terraform Module or defining a local Terraform module.
+    """Build rule for defining a Terraform module.
+
+
     Args:
         name: The name of the build rule.
         srcs: The source Terraform files for the Terraform module.
@@ -53,6 +57,22 @@ def terraform_module(
     aliases_flags = [f"--aliases=\"{a}\"" for a in aliases]
     aliases_cmd = " ".join(aliases_flags)
 
+    strip_flags = [f"--strip=\"{s}\"" for s in strip]
+    strip_cmd = " ".join(strip_flags)
+
+    # TODO: separate 'codegen' rule for deps (`.modules`).
+
+    submodules_rule = genrule(
+        name = tag(name, "modules"),
+        outs = [".modules"],
+        srcs = deps,
+        cmd = """
+        mkdir -p $OUTS
+        for dep in $SRCS; do cp --parents -a $dep $OUTS/; done
+        """,
+        labels = ["codegen"],
+    )
+
     return genrule(
         name = name,
         srcs = srcs,
@@ -61,12 +81,13 @@ def terraform_module(
         deps = deps,
         visibility = visibility,
         tools = [CONFIG.TERRAFORM.TOOL],
-        labels = ["terraform_configuration"] + labels,
+        labels = ["terraform_module"] + labels,
         cmd = f"""
 set -x
-$TOOLS -vvvvv module local \\
+$TOOLS -vvvvv build_module \\
     {deps_cmd} \\
     {aliases_cmd} \\
+    {strip_cmd} \\
     --pkg="$PKG" \\
     --name="$NAME" \\
     --srcs="$SRCS" \\
@@ -85,7 +106,7 @@ def terraform_registry_module(
         hashes:list=[],
         licences:list=[],
         labels:list=[],
-        visibility:list=[]):
+        visibility:list=None):
     """Build rule for obtaining a remote Terraform Module or defining a local Terraform module.
     Args:
         name: The name of the build rule.
@@ -106,39 +127,47 @@ def terraform_registry_module(
     mod_name = module.split("/")[1]
     mod_provider = module.split("/")[2]
 
-    deps = [canonicalise(dep) for dep in deps]
-    deps_flags = [f"--deps=\"$(location {d})\"" for d in deps]
-    deps_cmd = " ".join(deps_flags)
-
-    strip_flags = [f"--strip=\"{s}\"" for s in strip]
-    strip_cmd = " ".join(strip_flags)
-
-    aliases_flags = [f"--aliases=\"{a}\"" for a in aliases]
-    aliases_cmd = " ".join(aliases_flags)
-
-    return genrule(
-        name = name,
-        outs = [name],
-        exported_deps = deps,
-        deps = deps,
-        visibility = visibility,
+    download_rule = genrule(
+        name = tag(name, "download"),
+        outs = [tag(name, "download")],
         tools = [CONFIG.TERRAFORM.TOOL],
         cmd = f"""
 set -x
-$TOOLS -vvvvv module registry \\
-    --name="{name}" \\
-    {aliases_cmd} \\
-    {deps_cmd} \\
-    {strip_cmd} \\
+$TOOLS -vvvvv download_module \\
     --out="$OUTS" \\
     --registry="{registry}" \\
     --namespace="{mod_namespace}" \\
     --module_name="{mod_name}" \\
-    --provider="{mod_provider}" \\
-    --version="{version}" \\
-    --pkg="$PKG"
+    --system="{mod_provider}" \\
+    --version="{version}"
     """,
     )
+
+    return terraform_module(
+        name = name,
+        srcs = [download_rule],
+        aliases = [] + aliases,
+        deps = deps,
+        labels = ["terraform_registry_module"] + labels,
+        visibility = visibility,
+    )
+
+def terraform_provider(
+        name:str):
+    pass
+
+def terraform_workspace(
+        name:str,
+        root_module:str,
+        vars:dict=None,
+        var_files:list=[],
+        toolchain:str=None,
+        providers:list=[],
+        labels:list=[],
+        visibility:list=None):
+    """Build rule for executing Terraform against a Module.
+    """
+    pass
 
 def terraform_root(
         name:str,

@@ -7,6 +7,8 @@ go_library(
         "local.go",
         "module.go",
         "registry.go",
+        "builder.go",
+        "downloader.go",
     ],
     visibility = [
         "//cmd/...",
